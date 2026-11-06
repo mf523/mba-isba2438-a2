@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ProjectCard from "@/components/project-card";
 import { projects } from "@/data/projects";
 
 const skills = ["Next.js", "TypeScript", "React", "Plain CSS", "Node.js"];
@@ -16,14 +17,7 @@ export default function Home() {
         <h2>Featured Projects</h2>
         <ul className="card-list">
           {projects.map((project) => (
-            <li key={project.slug} className="card">
-              <h3>
-                <Link className="inline-link" href={`/projects/${project.slug}`}>
-                  {project.title}
-                </Link>
-              </h3>
-              <p>{project.summary}</p>
-            </li>
+            <ProjectCard key={project.slug} project={project} />
           ))}
         </ul>
       </section>
@@ -35,6 +29,11 @@ export default function Home() {
           ))}
         </ul>
       </section>
+      <p>
+        <Link className="inline-link" href="/projects">
+          View all projects
+        </Link>
+      </p>
     </>
   );
 }

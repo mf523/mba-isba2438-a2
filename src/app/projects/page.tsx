@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import ProjectCard from "@/components/project-card";
 import { projects } from "@/data/projects";
 
 export const metadata: Metadata = {
@@ -13,14 +13,7 @@ export default function Projects() {
       <p>A collection of projects I have built. Click one for details.</p>
       <ul className="card-list">
         {projects.map((project) => (
-          <li key={project.slug} className="card">
-            <h3>
-              <Link className="inline-link" href={`/projects/${project.slug}`}>
-                {project.title}
-              </Link>
-            </h3>
-            <p>{project.summary}</p>
-          </li>
+          <ProjectCard key={project.slug} project={project} />
         ))}
       </ul>
     </>
