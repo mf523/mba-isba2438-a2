@@ -33,15 +33,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <header className="site-header">
-          <nav aria-label="Main navigation">
-            <ul className="nav-list">
-              {navItems.map((item) => (
-                <li key={item.href}>
-                  <Link href={item.href}>{item.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          <div className="header-inner">
+            <Link className="brand" href="/">
+              My Portfolio
+            </Link>
+            <nav aria-label="Main navigation">
+              <ul className="nav-list">
+                {navItems.map((item) => (
+                  <li key={item.href}>
+                    <Link href={item.href}>{item.label}</Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
         </header>
         <main className="page-main">{children}</main>
         <footer className="site-footer">
