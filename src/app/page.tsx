@@ -1,13 +1,16 @@
 import Link from "next/link";
 import ProjectCard from "@/components/project-card";
 import { projects } from "@/data/projects";
+import { getSiteConfig } from "@/lib/site-config";
 
 const skills = ["Next.js", "TypeScript", "React", "Plain CSS", "Node.js"];
 
-export default function Home() {
+export default async function Home() {
+  const siteConfig = await getSiteConfig();
+
   return (
     <>
-      <h1>Hi, I&apos;m a software developer.</h1>
+      <h1>Welcome to {siteConfig.siteName}</h1>
       <p>
         Welcome to my portfolio. I build web applications with Next.js and
         TypeScript. Explore my background, browse my projects, and get in
