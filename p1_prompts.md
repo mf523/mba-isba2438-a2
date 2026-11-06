@@ -14,7 +14,15 @@
 - do we have reusable ProjectCard and render the collection on /projects?
 - what's "Alex Rivera" test submission? what's to be fixed about it?
 - review the code, find out the root cause for persist "Your message has been sent. Thank you!" notice on 'Contact Me" page. **edited code without approval!!!!**
+- As a senior software developer, review the code to find out bugs and identify the root cause.
+- As a senior qa engineer, verify the above 4 bugs.
+- Document the 4 bugs and the reproduction steps in file BUGS.md
+- As a senior software developer, fix the bugs in  BUGS.md one by one, than verify them one by one as senior qa engineer.
 
 ## Design
 - give me 3 most popular project management websites, and quickly/concisely summarize their ui styles
 - let's follow Trello's style, give me a visual effect of ui design for our project.
+
+
+
+

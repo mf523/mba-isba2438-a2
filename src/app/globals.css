@@ -269,17 +269,11 @@ a {
 .form-feedback-success {
   background: #e3fcef;
   border: 1px solid var(--success);
+  transition: opacity 500ms ease;
 }
 
-@keyframes feedback-expire {
-  to {
-    visibility: hidden;
-    opacity: 0;
-  }
-}
-
-.feedback-autohide {
-  animation: feedback-expire 0.5s ease 5s forwards;
+.feedback-fading {
+  opacity: 0;
 }
 
 .form-feedback-error {

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export interface ContactSubmission {
@@ -16,8 +16,13 @@ export interface ContactFieldErrors {
   message?: string;
 }
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "contact-submissions.json");
+function dataDir(): string {
+  return process.env.CONTACT_SUBMISSIONS_DIR ?? path.join(process.cwd(), "data");
+}
+
+function dataFile(): string {
+  return path.join(dataDir(), "contact-submissions.json");
+}
 
 export function validateContactInput(input: {
   name: string;
@@ -43,14 +48,64 @@ export function validateContactInput(input: {
   return errors;
 }
 
-async function readSubmissions(): Promise<ContactSubmission[]> {
-  try {
-    const raw = await readFile(DATA_FILE, "utf8");
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as ContactSubmission[]) : [];
-  } catch {
-    return [];
+function isSubmission(value: unknown): value is ContactSubmission {
+  if (typeof value !== "object" || value === null) {
+    return false;
   }
+  const entry = value as Record<string, unknown>;
+  return (
+    typeof entry.id === "string" &&
+    typeof entry.name === "string" &&
+    typeof entry.email === "string" &&
+    typeof entry.message === "string" &&
+    typeof entry.submittedAt === "string"
+  );
+}
+
+function parseSubmissions(raw: string, file: string): ContactSubmission[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`Contact submissions store is corrupt: ${file}`);
+  }
+  if (!Array.isArray(parsed) || !parsed.every(isSubmission)) {
+    throw new Error(`Contact submissions store is corrupt: ${file}`);
+  }
+  return parsed;
+}
+
+function isEnoent(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "ENOENT"
+  );
+}
+
+async function readSubmissions(): Promise<ContactSubmission[]> {
+  let raw: string;
+  try {
+    raw = await readFile(dataFile(), "utf8");
+  } catch (error) {
+    if (isEnoent(error)) {
+      return [];
+    }
+    throw error;
+  }
+  return parseSubmissions(raw, dataFile());
+}
+
+let writeQueue: Promise<unknown> = Promise.resolve();
+
+function enqueue<T>(task: () => Promise<T>): Promise<T> {
+  const result = writeQueue.then(task, task);
+  writeQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
 }
 
 export async function saveContactSubmission(input: {
@@ -58,19 +113,27 @@ export async function saveContactSubmission(input: {
   email: string;
   message: string;
 }): Promise<ContactSubmission> {
-  const submission: ContactSubmission = {
-    id: randomUUID(),
-    name: input.name.trim(),
-    email: input.email.trim(),
-    message: input.message.trim(),
-    submittedAt: new Date().toISOString(),
-  };
+  return enqueue(async () => {
+    const submission: ContactSubmission = {
+      id: randomUUID(),
+      name: input.name.trim(),
+      email: input.email.trim(),
+      message: input.message.trim(),
+      submittedAt: new Date().toISOString(),
+    };
 
-  const submissions = await readSubmissions();
-  submissions.push(submission);
+    const submissions = [...(await readSubmissions()), submission];
 
-  await mkdir(DATA_DIR, { recursive: true });
-  await writeFile(DATA_FILE, JSON.stringify(submissions, null, 2), "utf8");
+    await mkdir(dataDir(), { recursive: true });
+    const tempFile = `${dataFile()}.${randomUUID()}.tmp`;
+    try {
+      await writeFile(tempFile, JSON.stringify(submissions, null, 2), "utf8");
+      await rename(tempFile, dataFile());
+    } catch (error) {
+      await rm(tempFile, { force: true });
+      throw error;
+    }
 
-  return submission;
+    return submission;
+  });
 }

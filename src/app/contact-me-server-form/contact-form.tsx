@@ -4,11 +4,15 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { submitContact } from "./actions";
 import { initialContactFormState } from "./form-state";
 
+const SUCCESS_VISIBLE_MS = 5000;
+const FADE_MS = 500;
+
 export default function ContactForm() {
   const [state, formAction, isPending] = useActionState(
     submitContact,
     initialContactFormState,
   );
+  const [fadingThrough, setFadingThrough] = useState(0);
   const [dismissedThrough, setDismissedThrough] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -17,22 +21,30 @@ export default function ContactForm() {
       return;
     }
     formRef.current?.reset();
-    const timer = setTimeout(
-      () => setDismissedThrough(state.sequence),
-      5000,
+    const fadeTimer = setTimeout(
+      () => setFadingThrough(state.sequence),
+      SUCCESS_VISIBLE_MS,
     );
-    return () => clearTimeout(timer);
+    const dismissTimer = setTimeout(
+      () => setDismissedThrough(state.sequence),
+      SUCCESS_VISIBLE_MS + FADE_MS,
+    );
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(dismissTimer);
+    };
   }, [state]);
 
   const showSuccess =
     state.status === "success" && state.sequence > dismissedThrough;
+  const isFading = showSuccess && state.sequence <= fadingThrough;
 
   return (
     <form ref={formRef} action={formAction} noValidate>
       {showSuccess ? (
         <p
           key={state.sequence}
-          className="form-feedback form-feedback-success feedback-autohide"
+          className={`form-feedback form-feedback-success${isFading ? " feedback-fading" : ""}`}
           role="status"
           aria-live="polite"
         >
