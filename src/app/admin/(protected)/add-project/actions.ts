@@ -1,6 +1,6 @@
 "use server";
 
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { addProject } from "@/lib/projects";
 import type { AddProjectFormState } from "./add-project-state";
 
@@ -107,7 +107,7 @@ export async function addProjectAction(
     };
   }
 
-  updateTag("projects");
+  revalidateTag("projects", { expire: 0 });
 
   return {
     status: "success",

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
 import { getSiteConfig } from "@/lib/site-config";
 import "./globals.css";
 
@@ -50,7 +49,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <ul className="nav-list">
                 {navItems.map((item) => (
                   <li key={item.href}>
-                    <Link href={item.href}>{item.label}</Link>
+                    <a href={item.href}>{item.label}</a>
                   </li>
                 ))}
               </ul>

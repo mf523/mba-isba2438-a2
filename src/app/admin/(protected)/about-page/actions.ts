@@ -1,6 +1,6 @@
 "use server";
 
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { saveAbout } from "@/lib/about";
 import type { AboutFormState } from "./about-state";
 
@@ -58,7 +58,7 @@ export async function saveAboutAction(
 
   try {
     await saveAbout({ intro, skills, education, experience });
-    updateTag("about");
+    revalidateTag("about", { expire: 0 });
     return {
       status: "success",
       message: "About page updated.",

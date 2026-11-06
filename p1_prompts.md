@@ -57,4 +57,7 @@ To get a more detailed stack trace and pinpoint the issue, try one of the follow
 - move "skills" from home page to "about me", also make it editable in admin mode.
 
 
-
+## Three examples for agent's proposal
+- Contact store corruption (BUGS.md BUG-01, src/lib/json-store.ts) — agent proposed validate-on-read + atomic temp-file rename writes; accepted as-is; checked by manually corrupting contact-submissions.json and confirming the app errored loudly instead of wiping it — outcome: no silent data loss.
+- Add-project admin page (src/app/admin/(protected)/add-project/) — agent proposed moving projects from a static file to the JSON store with updateTag("projects") so new projects appear live; accepted with a tweak (auto-generated slug when left blank); checked by adding "Weather Dashboard" in the browser, then re-visiting home, /projects, and the new slug page — outcome: all three updated immediately.
+- Date.now() prerender crash (src/lib/session.ts) — agent proposed removing the session-expiry comparison from the render path, relying on cookie maxAge; accepted; checked by rebuilding and re-running the logged-in admin flow in dev and prod — outcome: zero validator errors in both logs.
