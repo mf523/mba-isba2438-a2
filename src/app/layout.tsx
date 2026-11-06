@@ -14,13 +14,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "My Portfolio",
-    template: "%s | My Portfolio",
-  },
-  description: "Portfolio for ISBA 2438 built with Next.js App Router.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const siteConfig = await getSiteConfig();
+  return {
+    title: {
+      default: siteConfig.siteName,
+      template: `%s | ${siteConfig.siteName}`,
+    },
+    description: siteConfig.tagline
+      ? `${siteConfig.tagline} — portfolio for ISBA 2438 built with Next.js App Router.`
+      : "Portfolio for ISBA 2438 built with Next.js App Router.",
+  };
+}
 
 const navItems = [
   { href: "/", label: "Home" },
