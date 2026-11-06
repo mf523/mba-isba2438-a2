@@ -2,40 +2,35 @@
 
 import { revalidateTag } from "next/cache";
 import { addProject } from "@/lib/projects";
+import {
+  isValidHttpUrl,
+  isValidProjectSlug,
+  slugify,
+} from "@/lib/validation";
 import type { AddProjectFormState } from "./add-project-state";
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+function parseInput(formData: FormData, name: string): string {
+  return String(formData.get(name) ?? "").trim();
 }
 
-function isOptionalHttpUrl(value: string): boolean {
-  if (value.length === 0) {
-    return true;
-  }
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
+function parseTechStack(value: string): string[] {
+  return value
+    .split(",")
+    .map((tech) => tech.trim())
+    .filter((tech) => tech.length > 0);
 }
 
 export async function addProjectAction(
   _prevState: AddProjectFormState,
   formData: FormData,
 ): Promise<AddProjectFormState> {
-  const title = String(formData.get("title") ?? "").trim();
-  const slugInput = String(formData.get("slug") ?? "").trim();
-  const summary = String(formData.get("summary") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
-  const techStackInput = String(formData.get("techStack") ?? "").trim();
-  const repoUrl = String(formData.get("repoUrl") ?? "").trim();
-  const liveUrl = String(formData.get("liveUrl") ?? "").trim();
+  const title = parseInput(formData, "title");
+  const slugInput = parseInput(formData, "slug");
+  const summary = parseInput(formData, "summary");
+  const description = parseInput(formData, "description");
+  const repoUrl = parseInput(formData, "repoUrl");
+  const liveUrl = parseInput(formData, "liveUrl");
+  const techStack = parseTechStack(parseInput(formData, "techStack"));
 
   const fieldErrors: AddProjectFormState["fieldErrors"] = {};
 
@@ -48,9 +43,7 @@ export async function addProjectAction(
   const slug = slugInput.length > 0 ? slugify(slugInput) : slugify(title);
   if (slug.length === 0) {
     fieldErrors.slug = "Enter a slug, or use a title with letters or numbers.";
-  } else if (slug.length > 64) {
-    fieldErrors.slug = "Slug must be 64 characters or fewer.";
-  } else if (!SLUG_PATTERN.test(slug)) {
+  } else if (!isValidProjectSlug(slug)) {
     fieldErrors.slug =
       "Slug may only contain lowercase letters, numbers, and dashes.";
   }
@@ -67,15 +60,10 @@ export async function addProjectAction(
     fieldErrors.description = "Description must be 2000 characters or fewer.";
   }
 
-  const techStack = techStackInput
-    .split(",")
-    .map((tech) => tech.trim())
-    .filter((tech) => tech.length > 0);
-
-  if (!isOptionalHttpUrl(repoUrl)) {
+  if (repoUrl.length > 0 && !isValidHttpUrl(repoUrl)) {
     fieldErrors.repoUrl = "Enter a full URL starting with http:// or https://.";
   }
-  if (!isOptionalHttpUrl(liveUrl)) {
+  if (liveUrl.length > 0 && !isValidHttpUrl(liveUrl)) {
     fieldErrors.liveUrl = "Enter a full URL starting with http:// or https://.";
   }
 
