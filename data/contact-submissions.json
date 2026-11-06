@@ -1,0 +1,16 @@
+[
+  {
+    "id": "seed-1",
+    "name": "Alice Wonder",
+    "email": "alice@example.com",
+    "message": "Love the portfolio!",
+    "submittedAt": "2026-11-05T10:00:00.000Z"
+  },
+  {
+    "id": "seed-2",
+    "name": "Bob Builder",
+    "email": "bob@example.com",
+    "message": "Are you available for freelance work?",
+    "submittedAt": "2026-11-06T09:30:00.000Z"
+  }
+]

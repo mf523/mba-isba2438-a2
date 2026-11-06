@@ -24,5 +24,8 @@
 - let's follow Trello's style, give me a visual effect of ui design for our project.
 
 
+## New functions/pages
+- implement a new mode 'admin', design an authentication mechanism to change to admin mode
+- in admin mode, new pages are accessible: 'Site config' (website settings) and 'Contact requests' (list of contact requests)
 
 
