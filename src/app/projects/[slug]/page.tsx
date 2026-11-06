@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getProjectBySlug, projects } from "@/data/projects";
+import { getProjectBySlug, getProjects } from "@/lib/projects";
 
 export async function generateStaticParams() {
-  return projects.map((project) => ({ slug: project.slug }));
+  return (await getProjects()).map((project) => ({ slug: project.slug }));
 }
 
 export async function generateMetadata(
   { params }: PageProps<"/projects/[slug]">,
 ): Promise<Metadata> {
   const { slug } = await params;
-  const project = getProjectBySlug(slug);
+  const project = await getProjectBySlug(slug);
   return { title: project ? project.title : "Project Not Found" };
 }
 
@@ -21,7 +21,7 @@ async function ProjectContent({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const project = getProjectBySlug(slug);
+  const project = await getProjectBySlug(slug);
 
   if (!project) {
     notFound();
@@ -45,6 +45,16 @@ async function ProjectContent({
           <p>
             <a className="inline-link" href={project.repoUrl}>
               {project.repoUrl}
+            </a>
+          </p>
+        </section>
+      ) : null}
+      {project.liveUrl ? (
+        <section>
+          <h2>Live Demo</h2>
+          <p>
+            <a className="inline-link" href={project.liveUrl}>
+              {project.liveUrl}
             </a>
           </p>
         </section>
