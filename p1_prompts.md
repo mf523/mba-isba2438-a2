@@ -46,6 +46,7 @@ To get a more detailed stack trace and pinpoint the issue, try one of the follow
 ## Design
 - give me 3 most popular project management websites, and quickly/concisely summarize their ui styles
 - let's follow Trello's style, give me a visual effect of ui design for our project.
+- remove "View all projects" from home page
 
 
 ## New functions/pages
@@ -54,5 +55,6 @@ To get a more detailed stack trace and pinpoint the issue, try one of the follow
 - in admin mode, add new page for adding new project
 - in "admin" mode, add UI for editing contents on "About me" page.
 - move "skills" from home page to "about me", also make it editable in admin mode.
+
 
 
