@@ -3,8 +3,6 @@ import ProjectCard from "@/components/project-card";
 import { getProjects } from "@/lib/projects";
 import { getSiteConfig } from "@/lib/site-config";
 
-const skills = ["Next.js", "TypeScript", "React", "Plain CSS", "Node.js"];
-
 export default async function Home() {
   const [siteConfig, projects] = await Promise.all([
     getSiteConfig(),
@@ -24,14 +22,6 @@ export default async function Home() {
         <ul className="card-list">
           {projects.map((project) => (
             <ProjectCard key={project.slug} project={project} />
-          ))}
-        </ul>
-      </section>
-      <section>
-        <h2>Skills</h2>
-        <ul className="tag-list">
-          {skills.map((skill) => (
-            <li key={skill}>{skill}</li>
           ))}
         </ul>
       </section>

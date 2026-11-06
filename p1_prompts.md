@@ -52,6 +52,7 @@ To get a more detailed stack trace and pinpoint the issue, try one of the follow
 - implement a new mode 'admin', design an authentication mechanism to change to admin mode
 - in admin mode, new pages are accessible: 'Site config' (website settings) and 'Contact requests' (list of contact requests)
 - in admin mode, add new page for adding new project
-
+- in "admin" mode, add UI for editing contents on "About me" page.
+- move "skills" from home page to "about me", also make it editable in admin mode.
 
 
