@@ -1,6 +1,6 @@
 "use server";
 
-import { updateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 import { isValidEmail } from "@/lib/validation";
 import { saveSiteConfig } from "@/lib/site-config";
 import type { SiteConfigFormState } from "./site-config-state";
@@ -50,7 +50,7 @@ export async function saveSiteConfigAction(
       contactEmail: input.contactEmail.trim(),
       footerText: input.footerText.trim(),
     });
-    updateTag("site-config");
+    revalidateTag("site-config", { expire: 0 });
     return {
       status: "success",
       message: "Site settings saved.",

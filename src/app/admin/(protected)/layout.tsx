@@ -18,7 +18,8 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
           <Link href="/admin/about-page">About page</Link>
           <Link href="/admin/site-config">Site config</Link>
           <Link href="/admin/contacts">Contact requests</Link>
-          <Link href="/">View site</Link>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- full reload so admin edits are visible immediately */}
+          <a href="/">View site</a>
         </nav>
         <form action={logout}>
           <button className="admin-logout" type="submit">
