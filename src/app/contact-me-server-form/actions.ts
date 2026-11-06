@@ -20,6 +20,7 @@ export async function submitContact(
 
   if (Object.keys(fieldErrors).length > 0) {
     return {
+      sequence: _prevState.sequence + 1,
       status: "error",
       message: "Please fix the highlighted fields and try again.",
       fieldErrors,
@@ -29,12 +30,14 @@ export async function submitContact(
   try {
     await saveContactSubmission(input);
     return {
+      sequence: _prevState.sequence + 1,
       status: "success",
       message: "Your message has been sent. Thank you!",
       fieldErrors: {},
     };
   } catch {
     return {
+      sequence: _prevState.sequence + 1,
       status: "error",
       message:
         "Something went wrong while sending your message. Please try again.",
