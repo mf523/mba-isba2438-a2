@@ -65,16 +65,8 @@ a {
   margin: 0 auto;
 }
 
-.brand,
 .site-header a {
   color: #ffffff;
-}
-
-.brand {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-  border-radius: 4px;
 }
 
 .site-header a:hover {
