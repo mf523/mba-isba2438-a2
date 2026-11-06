@@ -48,13 +48,5 @@ export async function isAdmin(): Promise<boolean> {
   }
   const expected = Buffer.from(sign(payload));
   const provided = Buffer.from(signature);
-  if (expected.length !== provided.length || !timingSafeEqual(expected, provided)) {
-    return false;
-  }
-  try {
-    const { exp } = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return typeof exp === "number" && exp > Date.now();
-  } catch {
-    return false;
-  }
+  return expected.length === provided.length && timingSafeEqual(expected, provided);
 }
