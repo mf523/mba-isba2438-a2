@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { getSiteConfig } from "@/lib/site-config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,17 +27,23 @@ const navItems = [
   { href: "/about-me", label: "About Me" },
   { href: "/projects", label: "My Projects" },
   { href: "/contact-me-server-form", label: "Contact Me" },
+  { href: "/admin", label: "Admin" },
 ];
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const siteConfig = await getSiteConfig();
+
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
         <header className="site-header">
           <div className="header-inner">
             <Link className="brand" href="/">
-              My Portfolio
+              {siteConfig.siteName}
             </Link>
+            {siteConfig.tagline ? (
+              <span className="brand-tagline">{siteConfig.tagline}</span>
+            ) : null}
             <nav aria-label="Main navigation">
               <ul className="nav-list">
                 {navItems.map((item) => (
@@ -50,7 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </header>
         <main className="page-main">{children}</main>
         <footer className="site-footer">
-          <p>&copy; 2026 My Portfolio</p>
+          <p>{siteConfig.footerText}</p>
         </footer>
       </body>
     </html>

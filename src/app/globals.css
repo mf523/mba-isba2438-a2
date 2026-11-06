@@ -287,6 +287,95 @@ a {
   font-weight: 500;
 }
 
+.brand-tagline {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+}
+
+.admin-shell {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  margin: 24px;
+  overflow: hidden;
+}
+
+.admin-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  background: #6554c0;
+}
+
+.admin-badge {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  padding: 3px 10px;
+}
+
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.admin-nav a {
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.admin-nav a:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.admin-logout {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6554c0;
+  background: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.admin-logout:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
+  vertical-align: top;
+}
+
+.admin-table th {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
   padding: 16px 24px;
