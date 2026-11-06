@@ -41,6 +41,7 @@ To get a more detailed stack trace and pinpoint the issue, try one of the follow
   code: 'NEXT_STATIC_GEN_BAILOUT'
 }
 </code>
+- why about-me page is not showing the latest updated contents, until i refresh it?
 
 
 ## Design

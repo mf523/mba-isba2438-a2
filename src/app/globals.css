@@ -374,3 +374,20 @@ a {
   color: var(--muted);
   font-size: 14px;
 }
+
+.not-found {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 48px 0;
+}
+
+.not-found h1 {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.not-found p {
+  color: #5e6c84;
+  line-height: 1.6;
+}
