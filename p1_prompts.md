@@ -18,6 +18,30 @@
 - As a senior qa engineer, verify the above 4 bugs.
 - Document the 4 bugs and the reproduction steps in file BUGS.md
 - As a senior software developer, fix the bugs in  BUGS.md one by one, than verify them one by one as senior qa engineer.
+- what's wrong? <code>Error: Route "/projects/[slug]": Next.js encountered uncached or runtime data during prerendering.
+
+`fetch(...)`, `cookies()`, `headers()`, `params`, `searchParams`, or `connection()` accessed outside of `<Suspense>` prevents the route from being prerendered, blocking the page load and leading to a slower user experience.
+
+
+Ways to fix this:
+  - [stream] Provide a placeholder with `<Suspense fallback={...}>` around the data access
+  - [cache] For uncached data (`fetch`, database calls): cache the access with `"use cache"` (does not apply to `connection()`)
+  - [block] Set `export const instant = false` to allow a blocking route
+
+
+Learn more: https://nextjs.org/docs/messages/blocking-prerender-dynamic
+    at main (<anonymous>)
+    at body (<anonymous>)
+    at html (<anonymous>)
+To get a more detailed stack trace and pinpoint the issue, try one of the following:
+  - Start the app in development mode by running `next dev`, then open "/projects/[slug]" in your browser to investigate the error.
+  - Rerun the production build with `next build --debug-prerender` to generate better stack traces.
+⨯ Error: 
+    at async m (.next/server/chunks/ssr/[root-of-the-server]__03s38g7fsdgmc._.js:1:12027) {
+  code: 'NEXT_STATIC_GEN_BAILOUT'
+}
+</code>
+
 
 ## Design
 - give me 3 most popular project management websites, and quickly/concisely summarize their ui styles
@@ -27,5 +51,7 @@
 ## New functions/pages
 - implement a new mode 'admin', design an authentication mechanism to change to admin mode
 - in admin mode, new pages are accessible: 'Site config' (website settings) and 'Contact requests' (list of contact requests)
+
+
 
 
