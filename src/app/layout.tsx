@@ -43,7 +43,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body>
         <header className="site-header">
           <div className="header-inner">
-            <span className="brand">{siteConfig.siteName}</span>
             {siteConfig.tagline ? (
               <span className="brand-tagline">{siteConfig.tagline}</span>
             ) : null}
