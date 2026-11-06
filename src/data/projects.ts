@@ -8,7 +8,7 @@ export interface Project {
   liveUrl?: string;
 }
 
-export const projects: Project[] = [
+export const DEFAULT_PROJECTS: Project[] = [
   {
     slug: "resume-site",
     title: "Resume Site",
@@ -28,7 +28,3 @@ export const projects: Project[] = [
     repoUrl: "https://github.com/example/task-tracker",
   },
 ];
-
-export function getProjectBySlug(slug: string): Project | undefined {
-  return projects.find((project) => project.slug === slug);
-}

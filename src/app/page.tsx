@@ -1,12 +1,15 @@
 import Link from "next/link";
 import ProjectCard from "@/components/project-card";
-import { projects } from "@/data/projects";
+import { getProjects } from "@/lib/projects";
 import { getSiteConfig } from "@/lib/site-config";
 
 const skills = ["Next.js", "TypeScript", "React", "Plain CSS", "Node.js"];
 
 export default async function Home() {
-  const siteConfig = await getSiteConfig();
+  const [siteConfig, projects] = await Promise.all([
+    getSiteConfig(),
+    getProjects(),
+  ]);
 
   return (
     <>

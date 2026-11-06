@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import ProjectCard from "@/components/project-card";
-import { projects } from "@/data/projects";
+import { getProjects } from "@/lib/projects";
 
 export const metadata: Metadata = {
   title: "My Projects",
 };
 
-export default function Projects() {
+export default async function Projects() {
+  const projects = await getProjects();
+
   return (
     <>
       <h1>My Projects</h1>
