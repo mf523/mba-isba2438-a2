@@ -1,6 +1,6 @@
 # BUGS.md
 
-QA findings for the contact-form persistence layer and success-feedback UI.
+QA findings for the contact-form persistence layer, success-feedback UI, and admin mode.
 All findings verified empirically against the current build (Next.js 16.4.5, production build via `next start`).
 
 | ID | Title | Severity | Status |
@@ -9,6 +9,9 @@ All findings verified empirically against the current build (Next.js 16.4.5, pro
 | BUG-02 | Concurrent submissions lose updates | Medium | Fixed & verified |
 | BUG-03 | Success banner fade-out never plays (JS unmount preempts CSS animation) | Low | Fixed & verified |
 | BUG-04 | Data directory path depends on `process.cwd()` | Medium | Fixed & verified |
+| BUG-05 | Empty admin password authenticates when `ADMIN_PASSWORD` is set to empty | Medium | Fixed & verified |
+| BUG-06 | `BUGS.md` documents the wrong data-directory env var | Low | Fixed & verified |
+| BUG-07 | Browser tab title does not follow site config | Low | Fixed & verified |
 
 ---
 
@@ -185,11 +188,138 @@ the repo `data/` file did not receive it.
 
 ### Resolution (verified)
 
-The store directory is `CONTACT_SUBMISSIONS_DIR` (env) when set, falling back
+The store directory is `PORTFOLIO_DATA_DIR` (env) when set, falling back
 to `process.cwd()/data` — the contract `next dev` / `next start` guarantee.
 Verified: foreign cwd + env var → submission landed in the configured
 directory and not the repo; no env + cwd at repo root → landed in repo
 `data/`.
+
+---
+
+## BUG-05 — Empty admin password authenticates when `ADMIN_PASSWORD` is set to empty
+
+- **Severity:** Medium (authentication bypass under a plausible misconfiguration)
+- **Location:** `src/lib/session.ts` (`isCorrectAdminPassword`)
+
+### Description
+
+The admin password fallback uses the nullish-coalescing operator:
+
+```ts
+const expected = process.env.ADMIN_PASSWORD ?? "portfolio-admin";
+```
+
+`??` only substitutes the default for `null`/`undefined`. Setting
+`ADMIN_PASSWORD=""` in the environment therefore makes the **empty string**
+the expected password, and any login attempt with a blank password succeeds.
+
+### Root cause
+
+`??` (nullish coalescing) does not treat an empty string as "unset". An
+explicitly empty env value replaces the safe default instead of falling back
+to it.
+
+### Reproduction steps
+
+1. Start the server with an empty password configured:
+   `ADMIN_PASSWORD="" npx next start -p 3100`
+2. Open `/admin/login`, submit with the password field left blank.
+3. Observe the response and follow-up request to `/admin/contacts`.
+
+**Expected:** login is rejected ("Incorrect password.") and the default
+password fallback is used.
+
+**Actual (verified):** `303` redirect to `/admin/site-config`, an
+`admin_session` cookie is issued, and `/admin/contacts` renders the
+admin UI ("Admin mode" badge present).
+
+### Resolution (verified)
+
+`isCorrectAdminPassword` (and the session-secret fallback) now use `||`
+instead of `??`, so an explicitly empty env value falls back to the safe
+default. Verified with a 5-case matrix: empty env + blank password →
+rejected (200, no access); empty env + default password → accepted; no env +
+default password → accepted; custom env + matching password → accepted;
+custom env + wrong password → rejected.
+
+---
+
+## BUG-06 — `BUGS.md` documents the wrong data-directory env var
+
+- **Severity:** Low (documentation defect)
+- **Location:** `BUGS.md` BUG-04 "Resolution" section; actual implementation in
+  `src/lib/json-store.ts` (`dataDir`)
+
+### Description
+
+The BUG-04 resolution text named the env override `CONTACT_SUBMISSIONS_DIR`.
+The implementation actually shipped in the shared store module reads
+`PORTFOLIO_DATA_DIR` (applied to every JSON store, not just contact
+submissions).
+
+### Root cause
+
+The env var was renamed from the single-purpose `CONTACT_SUBMISSIONS_DIR` to
+the shared `PORTFOLIO_DATA_DIR` during the json-store refactor; the document
+was not updated with the code.
+
+### Reproduction steps
+
+1. Read `BUGS.md`, BUG-04 "Resolution": claims the override is
+   `CONTACT_SUBMISSIONS_DIR`.
+2. Read `src/lib/json-store.ts`, `dataDir()`: reads `process.env.PORTFOLIO_DATA_DIR`.
+
+**Expected:** documentation matches the implementation.
+
+**Actual:** names disagree; following the documented name has no effect.
+
+### Resolution (verified)
+
+The BUG-04 resolution section now documents `PORTFOLIO_DATA_DIR`, matching
+`dataDir()` in `src/lib/json-store.ts`. The remaining mentions of
+`CONTACT_SUBMISSIONS_DIR` in this section are the historical description of
+this defect. Verified by cross-reading both files.
+
+---
+
+## BUG-07 — Browser tab title does not follow site config
+
+- **Severity:** Low (cosmetic inconsistency)
+- **Location:** `src/app/layout.tsx` (`metadata` export)
+
+### Description
+
+Saving "Site config" live-updates the header brand, tagline, and footer
+(via `updateTag` on the `site-config` cache tag), but the static `metadata`
+export still hardcodes `default: "My Portfolio"` and
+`template: "%s | My Portfolio"`. Browser tab titles keep showing the old
+site name after the setting changes.
+
+### Root cause
+
+The root layout exports a static `metadata` object, which is evaluated once
+with hardcoded strings instead of deriving from the site config. Static
+`metadata` cannot read runtime data; `generateMetadata` is required.
+
+### Reproduction steps
+
+1. Sign in at `/admin`, open **Site config**, change **Site name** to a new
+   value (e.g. `Brand New Name`), save. The header brand updates immediately.
+2. Look at the browser tab title on any page.
+
+**Expected:** tab title reflects the configured site name.
+
+**Actual (verified):** tab title remains `Site Config | My Portfolio` —
+the hardcoded default — while the header shows `Brand New Name`.
+
+### Resolution (verified)
+
+The root layout now exports `generateMetadata` deriving `title.default` and
+`title.template` from `getSiteConfig()`. Verified: with the configured site
+name, `/` renders `<title>Brand New Name</title>`, sub-pages render
+`<title>About Me | Brand New Name</title>`; saving a new site name updates
+all tab titles on the next request without a server restart; the configured
+values were restored afterwards.
 
 ---
 

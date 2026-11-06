@@ -5,14 +5,14 @@ const COOKIE_NAME = "admin_session";
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 
 const SESSION_SECRET =
-  process.env.ADMIN_SESSION_SECRET ?? randomBytes(32).toString("hex");
+  process.env.ADMIN_SESSION_SECRET || randomBytes(32).toString("hex");
 
 function sign(payload: string): string {
   return createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
 }
 
 export function isCorrectAdminPassword(input: string): boolean {
-  const expected = process.env.ADMIN_PASSWORD ?? "portfolio-admin";
+  const expected = process.env.ADMIN_PASSWORD || "portfolio-admin";
   const a = Buffer.from(input);
   const b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
