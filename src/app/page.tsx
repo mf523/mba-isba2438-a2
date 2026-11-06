@@ -1,4 +1,3 @@
-import Link from "next/link";
 import ProjectCard from "@/components/project-card";
 import { getProjects } from "@/lib/projects";
 import { getSiteConfig } from "@/lib/site-config";
@@ -25,11 +24,6 @@ export default async function Home() {
           ))}
         </ul>
       </section>
-      <p>
-        <Link className="inline-link" href="/projects">
-          View all projects
-        </Link>
-      </p>
     </>
   );
 }
