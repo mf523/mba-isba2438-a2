@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { submitContact } from "./actions";
 import { initialContactFormState } from "./form-state";
 
@@ -9,19 +9,30 @@ export default function ContactForm() {
     submitContact,
     initialContactFormState,
   );
+  const [dismissedThrough, setDismissedThrough] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state.status === "success") {
-      formRef.current?.reset();
+    if (state.status !== "success") {
+      return;
     }
+    formRef.current?.reset();
+    const timer = setTimeout(
+      () => setDismissedThrough(state.sequence),
+      5000,
+    );
+    return () => clearTimeout(timer);
   }, [state]);
+
+  const showSuccess =
+    state.status === "success" && state.sequence > dismissedThrough;
 
   return (
     <form ref={formRef} action={formAction} noValidate>
-      {state.status === "success" ? (
+      {showSuccess ? (
         <p
-          className="form-feedback form-feedback-success"
+          key={state.sequence}
+          className="form-feedback form-feedback-success feedback-autohide"
           role="status"
           aria-live="polite"
         >
