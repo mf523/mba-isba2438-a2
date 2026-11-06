@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getProjectBySlug, projects } from "@/data/projects";
 
@@ -14,9 +15,11 @@ export async function generateMetadata(
   return { title: project ? project.title : "Project Not Found" };
 }
 
-export default async function ProjectPage({
+async function ProjectContent({
   params,
-}: PageProps<"/projects/[slug]">) {
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const project = getProjectBySlug(slug);
 
@@ -47,5 +50,15 @@ export default async function ProjectPage({
         </section>
       ) : null}
     </>
+  );
+}
+
+export default function ProjectPage({
+  params,
+}: PageProps<"/projects/[slug]">) {
+  return (
+    <Suspense fallback={<p>Loading project…</p>}>
+      <ProjectContent params={params} />
+    </Suspense>
   );
 }
