@@ -30,7 +30,9 @@ const navItems = [
   { href: "/", label: "Home" },
   { href: "/about-me", label: "About Me" },
   { href: "/projects", label: "My Projects" },
-  { href: "/contact-me-server-form", label: "Contact Me" },
+  { href: "/blogs", label: "Blogs" },
+  { href: "/contact-me-server-form", label: "Contact" },
+  { href: "/contact-me", label: "Contact (API)" },
   { href: "/admin", label: "Admin" },
 ];
 

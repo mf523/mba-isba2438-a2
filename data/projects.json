@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "resume-site",
+    "title": "Resume Site",
+    "summary": "A personal resume website built with server-rendered pages.",
+    "description": "A single-page resume website that renders my experience, education, and skills from structured data. Built to learn server-side rendering and static generation with Next.js.",
+    "techStack": [
+      "Next.js",
+      "TypeScript",
+      "CSS"
+    ],
+    "repoUrl": "https://github.com/example/resume-site"
+  },
+  {
+    "slug": "task-tracker",
+    "title": "Task Tracker",
+    "summary": "A small task tracker with local persistence and filtering.",
+    "description": "A task tracking app that supports creating, completing, and filtering tasks by status. State is persisted locally so tasks survive page reloads.",
+    "techStack": [
+      "React",
+      "TypeScript",
+      "CSS"
+    ],
+    "repoUrl": "https://github.com/example/task-tracker"
+  },
+  {
+    "slug": "my-new-project",
+    "title": "my new project",
+    "summary": "my new project summary",
+    "description": "brilliant project",
+    "techStack": [
+      "sql",
+      "ai"
+    ],
+    "repoUrl": "https://test.com",
+    "liveUrl": "https://test.com/test"
+  },
+  {
+    "slug": "test-project1",
+    "title": "test project1",
+    "summary": "tes test test",
+    "description": "xxxxxxxx",
+    "techStack": [
+      "sql",
+      "ai"
+    ],
+    "repoUrl": "https://test.com",
+    "liveUrl": "https://test.com/test"
+  }
+]
