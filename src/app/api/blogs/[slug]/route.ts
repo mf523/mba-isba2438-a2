@@ -10,8 +10,11 @@ export async function GET(
   if (!blog) {
     return NextResponse.json(
       { ok: false, message: "Blog post not found." },
-      { status: 404 },
+      { status: 404, headers: { "cache-control": "no-store" } },
     );
   }
-  return NextResponse.json({ ok: true, blog });
+  return NextResponse.json(
+    { ok: true, blog },
+    { headers: { "cache-control": "no-store" } },
+  );
 }

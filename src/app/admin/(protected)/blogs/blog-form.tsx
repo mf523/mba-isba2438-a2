@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { BlogFieldErrors } from "@/lib/blogs";
+import FormFeedback from "@/components/form-feedback";
 
 interface BlogApiFormState {
   status: "idle" | "success" | "error";
@@ -86,28 +87,14 @@ export default function BlogForm() {
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} noValidate>
-      {state.status === "success" ? (
-        <p
-          className="form-feedback form-feedback-success"
-          role="status"
-          aria-live="polite"
-        >
-          {state.message}{" "}
-          {state.blogSlug ? (
+      {state.status !== "idle" ? (
+        <FormFeedback status={state.status} message={state.message}>
+          {state.status === "success" && state.blogSlug ? (
             <a className="inline-link" href={`/blogs/${state.blogSlug}`}>
               View post
             </a>
           ) : null}
-        </p>
-      ) : null}
-      {state.status === "error" ? (
-        <p
-          className="form-feedback form-feedback-error"
-          role="alert"
-          aria-live="polite"
-        >
-          {state.message}
-        </p>
+        </FormFeedback>
       ) : null}
       <div className="field-group">
         <label htmlFor="blog-title">Title *</label>

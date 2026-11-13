@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       { ok: false, message: "Request body must be valid JSON." },
-      { status: 400 },
+      { status: 400, headers: { "cache-control": "no-store" } },
     );
   }
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (Object.keys(fieldErrors).length > 0) {
     return NextResponse.json(
       { ok: false, fieldErrors },
-      { status: 400 },
+      { status: 400, headers: { "cache-control": "no-store" } },
     );
   }
 
@@ -34,12 +34,12 @@ export async function POST(request: Request) {
     const submission = await saveContactSubmission(payload);
     return NextResponse.json(
       { ok: true, submission },
-      { status: 201 },
+      { status: 201, headers: { "cache-control": "no-store" } },
     );
   } catch {
     return NextResponse.json(
       { ok: false, message: "Something went wrong. Please try again." },
-      { status: 500 },
+      { status: 500, headers: { "cache-control": "no-store" } },
     );
   }
 }

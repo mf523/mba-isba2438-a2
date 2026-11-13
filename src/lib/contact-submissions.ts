@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { dataDir, enqueue, readJsonStore, writeJsonStoreAtomic } from "./json-store";
+import { createJsonStore, dataDir } from "./json-store";
 import { isValidEmail } from "./validation";
 
 export interface ContactSubmission {
@@ -17,9 +17,12 @@ export interface ContactFieldErrors {
   message?: string;
 }
 
-function dataFile(): string {
-  return path.join(dataDir(), "contact-submissions.json");
-}
+const store = createJsonStore<ContactSubmission[]>({
+  file: () => path.join(dataDir(), "contact-submissions.json"),
+  validate: (value): value is ContactSubmission[] =>
+    Array.isArray(value) && value.every(isSubmission),
+  defaults: () => [],
+});
 
 function isSubmission(value: unknown): value is ContactSubmission {
   if (typeof value !== "object" || value === null) {
@@ -59,20 +62,16 @@ export function validateContactInput(input: {
   return errors;
 }
 
-export async function getContactSubmissions(): Promise<ContactSubmission[]> {
-  const stored = await readJsonStore<ContactSubmission[]>(
-    dataFile(),
-    (value) => Array.isArray(value) && value.every(isSubmission),
-  );
-  return stored ?? [];
+export function getContactSubmissions(): Promise<ContactSubmission[]> {
+  return store.read();
 }
 
-export async function saveContactSubmission(input: {
+export function saveContactSubmission(input: {
   name: string;
   email: string;
   message: string;
 }): Promise<ContactSubmission> {
-  return enqueue(async () => {
+  return store.update((submissions) => {
     const submission: ContactSubmission = {
       id: randomUUID(),
       name: input.name.trim(),
@@ -80,10 +79,9 @@ export async function saveContactSubmission(input: {
       message: input.message.trim(),
       submittedAt: new Date().toISOString(),
     };
-
-    const submissions = [...(await getContactSubmissions()), submission];
-    await writeJsonStoreAtomic(dataFile(), submissions);
-
-    return submission;
+    return {
+      data: [...submissions, submission],
+      value: submission,
+    };
   });
 }

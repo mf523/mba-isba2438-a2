@@ -1,14 +1,44 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { cookies } from "next/headers";
+import { dataDir } from "./json-store";
 
 const COOKIE_NAME = "admin_session";
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 
-const SESSION_SECRET =
-  process.env.ADMIN_SESSION_SECRET || randomBytes(32).toString("hex");
+let cachedSecret: string | null = null;
+
+function getSessionSecret(): string {
+  if (cachedSecret !== null) {
+    return cachedSecret;
+  }
+  const fromEnv = process.env.ADMIN_SESSION_SECRET;
+  if (fromEnv) {
+    cachedSecret = fromEnv;
+    return fromEnv;
+  }
+  const dir = dataDir();
+  mkdirSync(dir, { recursive: true });
+  const secretFile = path.join(dir, ".session-secret");
+  try {
+    cachedSecret = readFileSync(secretFile, "utf8").trim();
+  } catch {
+    const secret = randomBytes(32).toString("hex");
+    try {
+      writeFileSync(secretFile, secret, { flag: "wx" });
+      cachedSecret = secret;
+    } catch {
+      cachedSecret = readFileSync(secretFile, "utf8").trim();
+    }
+  }
+  return cachedSecret;
+}
 
 function sign(payload: string): string {
-  return createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
+  return createHmac("sha256", getSessionSecret())
+    .update(payload)
+    .digest("base64url");
 }
 
 export function isCorrectAdminPassword(input: string): boolean {

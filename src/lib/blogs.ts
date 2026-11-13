@@ -2,11 +2,14 @@ import path from "node:path";
 import type { Blog } from "@/data/blogs";
 import { DEFAULT_BLOGS } from "@/data/blogs";
 import { isValidProjectSlug } from "./validation";
-import { dataDir, enqueue, readJsonStore, writeJsonStoreAtomic } from "./json-store";
+import { createJsonStore, dataDir } from "./json-store";
 
-function dataFile(): string {
-  return path.join(dataDir(), "blogs.json");
-}
+const store = createJsonStore<Blog[]>({
+  file: () => path.join(dataDir(), "blogs.json"),
+  validate: (value): value is Blog[] =>
+    Array.isArray(value) && value.every(isBlog),
+  defaults: () => DEFAULT_BLOGS.map((blog) => ({ ...blog })),
+});
 
 function isBlog(value: unknown): value is Blog {
   if (typeof value !== "object" || value === null) {
@@ -22,12 +25,8 @@ function isBlog(value: unknown): value is Blog {
   );
 }
 
-export async function getBlogs(): Promise<Blog[]> {
-  const stored = await readJsonStore<Blog[]>(
-    dataFile(),
-    (value) => Array.isArray(value) && value.every(isBlog),
-  );
-  return stored ?? DEFAULT_BLOGS.map((blog) => ({ ...blog }));
+export function getBlogs(): Promise<Blog[]> {
+  return store.read();
 }
 
 export async function getBlogBySlug(slug: string): Promise<Blog | undefined> {
@@ -39,20 +38,24 @@ export type AddBlogResult =
   | { ok: true; blog: Blog }
   | { ok: false; reason: "duplicate-slug" };
 
-export async function addBlog(
+export function addBlog(
   input: Omit<Blog, "publishedAt">,
 ): Promise<AddBlogResult> {
-  return enqueue(async () => {
-    const existing = await getBlogs();
-    if (existing.some((blog) => blog.slug === input.slug)) {
-      return { ok: false as const, reason: "duplicate-slug" as const };
+  return store.update((current): { data: Blog[]; value: AddBlogResult } => {
+    if (current.some((blog) => blog.slug === input.slug)) {
+      return {
+        data: current,
+        value: { ok: false, reason: "duplicate-slug" },
+      };
     }
     const blog: Blog = {
       ...input,
       publishedAt: new Date().toISOString(),
     };
-    await writeJsonStoreAtomic(dataFile(), [...existing, blog]);
-    return { ok: true as const, blog };
+    return {
+      data: [...current, blog],
+      value: { ok: true, blog },
+    };
   });
 }
 

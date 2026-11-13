@@ -1,13 +1,24 @@
 import { NextResponse } from "next/server";
+import { isAdmin } from "@/lib/session";
 import { addBlog, getBlogs, validateBlogInput } from "@/lib/blogs";
 import { slugify } from "@/lib/validation";
 
 export async function GET() {
   const blogs = await getBlogs();
-  return NextResponse.json({ ok: true, blogs });
+  return NextResponse.json(
+    { ok: true, blogs },
+    { headers: { "cache-control": "no-store" } },
+  );
 }
 
 export async function POST(request: Request) {
+  if (!(await isAdmin())) {
+    return NextResponse.json(
+      { ok: false, message: "Admin sign-in required." },
+      { status: 401 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -44,5 +55,8 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true, blog: result.blog }, { status: 201 });
+  return NextResponse.json(
+    { ok: true, blog: result.blog },
+    { status: 201, headers: { "cache-control": "no-store" } },
+  );
 }

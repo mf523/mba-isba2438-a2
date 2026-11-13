@@ -42,6 +42,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
         <header className="site-header">
           <div className="header-inner">
             {siteConfig.tagline ? (
@@ -58,7 +61,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </nav>
           </div>
         </header>
-        <main className="page-main">{children}</main>
+        <main className="page-main" id="main-content">{children}</main>
         <footer className="site-footer">
           <p>{siteConfig.footerText}</p>
         </footer>

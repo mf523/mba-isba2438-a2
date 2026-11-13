@@ -1,22 +1,16 @@
 import { cacheTag } from "next/cache";
 import path from "node:path";
-import { dataDir, enqueue, readJsonStore, writeJsonStoreAtomic } from "./json-store";
+import type { SiteConfig } from "@/data/site-config";
+import { SITE_CONFIG_DEFAULTS } from "@/data/site-config";
+import { createJsonStore, dataDir } from "./json-store";
 
-export interface SiteConfig {
-  siteName: string;
-  tagline: string;
-  contactEmail: string;
-  footerText: string;
-}
+const store = createJsonStore<SiteConfig>({
+  file: () => path.join(dataDir(), "site-config.json"),
+  validate: (value): value is SiteConfig => isSiteConfig(value),
+  defaults: () => ({ ...SITE_CONFIG_DEFAULTS }),
+});
 
-export const SITE_CONFIG_DEFAULTS: SiteConfig = {
-  siteName: "My Portfolio",
-  tagline: "Software developer portfolio",
-  contactEmail: "",
-  footerText: "My Portfolio",
-};
-
-export function isSiteConfig(value: unknown): value is SiteConfig {
+function isSiteConfig(value: unknown): value is SiteConfig {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -29,30 +23,12 @@ export function isSiteConfig(value: unknown): value is SiteConfig {
   );
 }
 
-function dataFile(): string {
-  return path.join(dataDir(), "site-config.json");
-}
-
 export async function getSiteConfig(): Promise<SiteConfig> {
   "use cache";
   cacheTag("site-config");
-  let stored: SiteConfig | null;
-  try {
-    stored = await readJsonStore<SiteConfig>(dataFile(), isSiteConfig);
-  } catch {
-    return { ...SITE_CONFIG_DEFAULTS };
-  }
-  if (!stored) {
-    return { ...SITE_CONFIG_DEFAULTS };
-  }
-  return {
-    siteName: stored.siteName.trim() || SITE_CONFIG_DEFAULTS.siteName,
-    tagline: stored.tagline,
-    contactEmail: stored.contactEmail,
-    footerText: stored.footerText || SITE_CONFIG_DEFAULTS.footerText,
-  };
+  return store.read();
 }
 
-export async function saveSiteConfig(config: SiteConfig): Promise<void> {
-  await enqueue(() => writeJsonStoreAtomic(dataFile(), config));
+export function saveSiteConfig(input: SiteConfig): Promise<void> {
+  return store.write(input);
 }

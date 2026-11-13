@@ -61,3 +61,38 @@ export async function writeJsonStoreAtomic<T>(
     throw error;
   }
 }
+
+export interface JsonStore<T> {
+  read: () => Promise<T>;
+  write: (data: T) => Promise<void>;
+  update: <Out>(
+    mutate: (current: T) => { data: T; value: Out },
+  ) => Promise<Out>;
+}
+
+export function createJsonStore<T>(config: {
+  file: () => string;
+  validate: (value: unknown) => value is T;
+  defaults: () => T;
+}): JsonStore<T> {
+  async function read(): Promise<T> {
+    const stored = await readJsonStore<T>(config.file(), config.validate);
+    return stored ?? config.defaults();
+  }
+
+  function write(data: T): Promise<void> {
+    return enqueue(() => writeJsonStoreAtomic(config.file(), data));
+  }
+
+  async function update<Out>(
+    mutate: (current: T) => { data: T; value: Out },
+  ): Promise<Out> {
+    return enqueue(async () => {
+      const { data, value } = mutate(await read());
+      await writeJsonStoreAtomic(config.file(), data);
+      return value;
+    });
+  }
+
+  return { read, write, update };
+}
