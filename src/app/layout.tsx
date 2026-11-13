@@ -32,7 +32,7 @@ const navItems = [
   { href: "/projects", label: "My Projects" },
   { href: "/blogs", label: "Blogs" },
   { href: "/contact-me-server-form", label: "Contact" },
-  { href: "/contact-me-server-api", label: "Contact (API)" },
+  { href: "/contact-me", label: "Contact (API)" },
   { href: "/admin", label: "Admin" },
 ];
 
