@@ -2,11 +2,14 @@ import { cacheTag } from "next/cache";
 import path from "node:path";
 import type { Project } from "@/data/projects";
 import { DEFAULT_PROJECTS } from "@/data/projects";
-import { dataDir, enqueue, readJsonStore, writeJsonStoreAtomic } from "./json-store";
+import { createJsonStore, dataDir } from "./json-store";
 
-function dataFile(): string {
-  return path.join(dataDir(), "projects.json");
-}
+const store = createJsonStore<Project[]>({
+  file: () => path.join(dataDir(), "projects.json"),
+  validate: (value): value is Project[] =>
+    Array.isArray(value) && value.every(isProject),
+  defaults: () => DEFAULT_PROJECTS.map((project) => ({ ...project })),
+});
 
 function isProject(value: unknown): value is Project {
   if (typeof value !== "object" || value === null) {
@@ -26,11 +29,7 @@ function isProject(value: unknown): value is Project {
 export async function getProjects(): Promise<Project[]> {
   "use cache";
   cacheTag("projects");
-  const stored = await readJsonStore<Project[]>(
-    dataFile(),
-    (value) => Array.isArray(value) && value.every(isProject),
-  );
-  return stored ?? DEFAULT_PROJECTS.map((project) => ({ ...project }));
+  return store.read();
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | undefined> {
@@ -42,13 +41,17 @@ export type AddProjectResult =
   | { ok: true; project: Project }
   | { ok: false; reason: "duplicate-slug" };
 
-export async function addProject(input: Project): Promise<AddProjectResult> {
-  return enqueue(async () => {
-    const existing = await getProjects();
-    if (existing.some((project) => project.slug === input.slug)) {
-      return { ok: false as const, reason: "duplicate-slug" as const };
+export function addProject(input: Project): Promise<AddProjectResult> {
+  return store.update((current): { data: Project[]; value: AddProjectResult } => {
+    if (current.some((project) => project.slug === input.slug)) {
+      return {
+        data: current,
+        value: { ok: false, reason: "duplicate-slug" },
+      };
     }
-    await writeJsonStoreAtomic(dataFile(), [...existing, input]);
-    return { ok: true as const, project: input };
+    return {
+      data: [...current, input],
+      value: { ok: true, project: input },
+    };
   });
 }

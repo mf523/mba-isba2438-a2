@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { addProjectAction } from "./actions";
 import { initialAddProjectFormState } from "./add-project-state";
+import FormFeedback from "@/components/form-feedback";
 
 export default function AddProjectForm() {
   const [state, formAction, isPending] = useActionState(
@@ -30,14 +31,9 @@ export default function AddProjectForm() {
 
   return (
     <form ref={formRef} action={formAction} noValidate>
-      {state.status === "success" ? (
-        <p
-          className="form-feedback form-feedback-success"
-          role="status"
-          aria-live="polite"
-        >
-          {state.message}{" "}
-          {state.projectSlug ? (
+      {state.status !== "idle" ? (
+        <FormFeedback status={state.status} message={state.message}>
+          {state.status === "success" && state.projectSlug ? (
             <a
               className="inline-link"
               href={`/projects/${state.projectSlug}`}
@@ -45,16 +41,7 @@ export default function AddProjectForm() {
               View project
             </a>
           ) : null}
-        </p>
-      ) : null}
-      {state.status === "error" ? (
-        <p
-          className="form-feedback form-feedback-error"
-          role="alert"
-          aria-live="polite"
-        >
-          {state.message}
-        </p>
+        </FormFeedback>
       ) : null}
       <div className="field-group">
         <label htmlFor="title">Title *</label>

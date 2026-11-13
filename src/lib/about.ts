@@ -2,11 +2,13 @@ import { cacheTag } from "next/cache";
 import path from "node:path";
 import type { AboutContent } from "@/data/about";
 import { DEFAULT_ABOUT_CONTENT } from "@/data/about";
-import { dataDir, enqueue, readJsonStore, writeJsonStoreAtomic } from "./json-store";
+import { createJsonStore, dataDir } from "./json-store";
 
-function dataFile(): string {
-  return path.join(dataDir(), "about.json");
-}
+const store = createJsonStore<AboutContent>({
+  file: () => path.join(dataDir(), "about.json"),
+  validate: (value): value is AboutContent => isAboutContent(value),
+  defaults: () => ({ ...DEFAULT_ABOUT_CONTENT }),
+});
 
 function isAboutContent(value: unknown): value is AboutContent {
   if (typeof value !== "object" || value === null) {
@@ -25,10 +27,9 @@ function isAboutContent(value: unknown): value is AboutContent {
 export async function getAbout(): Promise<AboutContent> {
   "use cache";
   cacheTag("about");
-  const stored = await readJsonStore<AboutContent>(dataFile(), isAboutContent);
-  return stored ?? { ...DEFAULT_ABOUT_CONTENT };
+  return store.read();
 }
 
-export async function saveAbout(input: AboutContent): Promise<void> {
-  return enqueue(() => writeJsonStoreAtomic(dataFile(), input));
+export function saveAbout(input: AboutContent): Promise<void> {
+  return store.write(input);
 }

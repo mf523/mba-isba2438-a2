@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { ContactFieldErrors } from "@/lib/contact-submissions";
+import FormFeedback from "@/components/form-feedback";
 
 interface ApiFormState {
   status: "idle" | "success" | "error";
@@ -83,23 +84,8 @@ export default function ContactApiForm() {
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} noValidate>
-      {state.status === "success" ? (
-        <p
-          className="form-feedback form-feedback-success"
-          role="status"
-          aria-live="polite"
-        >
-          {state.message}
-        </p>
-      ) : null}
-      {state.status === "error" ? (
-        <p
-          className="form-feedback form-feedback-error"
-          role="alert"
-          aria-live="polite"
-        >
-          {state.message}
-        </p>
+      {state.status !== "idle" ? (
+        <FormFeedback status={state.status} message={state.message} />
       ) : null}
       <div className="field-group">
         <label htmlFor="api-name">Name</label>

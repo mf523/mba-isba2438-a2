@@ -16,6 +16,12 @@ export default function BlogPostContent() {
   const [state, setState] = useState<PostState>({ status: "loading" });
 
   useEffect(() => {
+    if (state.status === "ready") {
+      document.title = state.blog.title;
+    }
+  }, [state]);
+
+  useEffect(() => {
     if (!slug) {
       return;
     }
@@ -70,7 +76,13 @@ export default function BlogPostContent() {
         })}
       </p>
       <p>{state.blog.summary}</p>
-      <p>{state.blog.content}</p>
+      {state.blog.content
+        .split(/\n{2,}/)
+        .map((paragraph) => paragraph.trim())
+        .filter((paragraph) => paragraph.length > 0)
+        .map((paragraph) => (
+          <p key={paragraph.slice(0, 24)}>{paragraph}</p>
+        ))}
     </>
   );
 }

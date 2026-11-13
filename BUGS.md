@@ -332,3 +332,17 @@ values were restored afterwards.
 - Success-banner persistence suite (submit → auto-hide at 5s; re-submit →
   banner replays; back/forward via router cache and bfcache → never persists
   indefinitely) — all assertions pass
+
+## Security notes (accepted risks, reviewed 2026-11-13)
+
+Hardened:
+- `POST /api/blogs` now requires an admin session; unauthenticated calls get 401.
+- `/admin/login` rate-limits failures in memory: five wrong passwords lock attempts for 60 seconds (per process).
+- Admin passwords compared with `timingSafeEqual`; session cookies are HMAC-signed.
+
+Accepted for this coursework demo:
+- Session cookies are `httpOnly` but not `secure` (localhost runs plain HTTP). Set `ADMIN_SESSION_SECRET` in production; see `.env.example`.
+- Session expiry is enforced by the cookie's `maxAge` only; a signed cookie stays valid until its browser expiry even past 8 hours. (Fixing this in render code reintroduces prerender-time `Date.now()` instability under `cacheComponents`.)
+- `ADMIN_SESSION_SECRET` falls back to a random secret persisted in `data/.session-secret`, so sessions survive restarts (gitignored). Set the env var to share one secret across machines.
+- The login rate limit is in-memory and global (not per-IP), and resets on server restart.
+- Data stores are plain JSON files; last writer wins, and concurrent dev + prod servers each hold their own caches.

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { saveAboutAction } from "./actions";
 import { initialAboutFormState } from "./about-state";
+import FormFeedback from "@/components/form-feedback";
 
 interface AboutFormProps {
   content: {
@@ -32,23 +33,8 @@ export default function AboutForm({ content }: AboutFormProps) {
 
   return (
     <form action={formAction} noValidate>
-      {state.status === "success" ? (
-        <p
-          className="form-feedback form-feedback-success"
-          role="status"
-          aria-live="polite"
-        >
-          {state.message}
-        </p>
-      ) : null}
-      {state.status === "error" ? (
-        <p
-          className="form-feedback form-feedback-error"
-          role="alert"
-          aria-live="polite"
-        >
-          {state.message}
-        </p>
+      {state.status !== "idle" ? (
+        <FormFeedback status={state.status} message={state.message} />
       ) : null}
       <div className="field-group">
         <label htmlFor="intro">Intro *</label>
