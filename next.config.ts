@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
         destination: "/blogs",
         permanent: false,
       },
+      {
+        source: "/admin/add-project",
+        destination: "/admin/projects",
+        permanent: false,
+      },
     ];
   },
 };

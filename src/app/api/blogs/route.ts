@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
-import { isAdmin } from "@/lib/session";
-import { addBlog, getBlogs, validateBlogInput } from "@/lib/blogs";
+import { logApiCall, parseJsonBody, requireAdmin } from "@/lib/api";
+import {
+  addBlog,
+  getBlogs,
+  validateBlogInput,
+} from "@/lib/blogs";
 import { slugify } from "@/lib/validation";
 
-export async function GET() {
+export async function GET(request: Request) {
   const blogs = await getBlogs();
+  logApiCall(request, 200);
   return NextResponse.json(
     { ok: true, blogs },
     { headers: { "cache-control": "no-store" } },
@@ -12,24 +17,19 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await isAdmin())) {
-    return NextResponse.json(
-      { ok: false, message: "Admin sign-in required." },
-      { status: 401 },
-    );
+  const denied = await requireAdmin();
+  if (denied) {
+    logApiCall(request, denied.status);
+    return denied;
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { ok: false, message: "Request body must be valid JSON." },
-      { status: 400 },
-    );
+  const parsed = await parseJsonBody(request);
+  if (!parsed.ok) {
+    logApiCall(request, parsed.response.status);
+    return parsed.response;
   }
 
-  const input = body as Record<string, unknown>;
+  const input = parsed.body;
   const title = typeof input.title === "string" ? input.title.trim() : "";
   const summary = typeof input.summary === "string" ? input.summary.trim() : "";
   const content = typeof input.content === "string" ? input.content.trim() : "";
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
 
   const fieldErrors = validateBlogInput({ title, slug, summary, content });
   if (Object.keys(fieldErrors).length > 0) {
+    logApiCall(request, 400);
     return NextResponse.json(
       { ok: false, fieldErrors },
       { status: 400 },
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
 
   const result = await addBlog({ slug, title, summary, content });
   if (!result.ok) {
+    logApiCall(request, 409);
     return NextResponse.json(
       {
         ok: false,
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
     );
   }
 
+  logApiCall(request, 201);
   return NextResponse.json(
     { ok: true, blog: result.blog },
     { status: 201, headers: { "cache-control": "no-store" } },

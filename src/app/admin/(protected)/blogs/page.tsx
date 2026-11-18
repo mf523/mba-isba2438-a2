@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import AdminGate from "../admin-gate";
-import BlogForm from "./blog-form";
+import BlogBoard from "./blog-board";
 
 export const metadata: Metadata = {
-  title: "New Blog Post",
+  title: "Blog Posts",
 };
 
 function BlogPageContent() {
   return (
     <>
       <p>
-        Create a blog post. Submitting sends a POST request to /api/blogs,
-        which validates and saves the post; it appears on /blogs immediately.
+        Manage the blog posts shown on /blogs. Every change goes through the
+        blogs API; posts appear on the public site immediately.
       </p>
-      <BlogForm />
+      <BlogBoard />
     </>
   );
 }

@@ -14,12 +14,13 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="admin-bar">
         <span className="admin-badge">Admin mode</span>
         <nav aria-label="Admin navigation" className="admin-nav">
-          <Link href="/admin/add-project">Add project</Link>
           <Link href="/admin/briefs">Briefs</Link>
+          <Link href="/admin/ideas">Ideas</Link>
+          <Link href="/admin/blogs">Blog posts</Link>
+          <Link href="/admin/projects">Projects</Link>
+          <Link href="/admin/contacts">Contact requests</Link>
           <Link href="/admin/about-page">About page</Link>
           <Link href="/admin/site-config">Site config</Link>
-          <Link href="/admin/blogs">Blog posts</Link>
-          <Link href="/admin/contacts">Contact requests</Link>
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- full reload so admin edits are visible immediately */}
           <a href="/">View site</a>
         </nav>

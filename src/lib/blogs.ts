@@ -101,3 +101,53 @@ export function validateBlogInput(input: {
 
   return errors;
 }
+
+export type BlogUpdateResult =
+  | { ok: true; blog: Blog }
+  | { ok: false; reason: "not-found" };
+
+export async function updateBlog(
+  slug: string,
+  input: { title: string; summary: string; content: string },
+): Promise<BlogUpdateResult> {
+  return store.update((current): { data: Blog[]; value: BlogUpdateResult } => {
+    const index = current.findIndex((blog) => blog.slug === slug);
+    if (index === -1) {
+      return {
+        data: current,
+        value: { ok: false, reason: "not-found" },
+      };
+    }
+    const updated: Blog = {
+      ...current[index],
+      title: input.title,
+      summary: input.summary,
+      content: input.content,
+    };
+    const next = [...current];
+    next[index] = updated;
+    return {
+      data: next,
+      value: { ok: true, blog: updated },
+    };
+  });
+}
+
+export type BlogDeleteResult =
+  | { ok: true }
+  | { ok: false; reason: "not-found" };
+
+export async function deleteBlog(slug: string): Promise<BlogDeleteResult> {
+  return store.update((current): { data: Blog[]; value: BlogDeleteResult } => {
+    if (!current.some((blog) => blog.slug === slug)) {
+      return {
+        data: current,
+        value: { ok: false, reason: "not-found" },
+      };
+    }
+    return {
+      data: current.filter((blog) => blog.slug !== slug),
+      value: { ok: true },
+    };
+  });
+}

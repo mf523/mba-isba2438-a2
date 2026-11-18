@@ -14,7 +14,7 @@ export function enqueue<T>(task: () => Promise<T>): Promise<T> {
 }
 
 export function dataDir(): string {
-  return process.env.PORTFOLIO_DATA_DIR ?? path.join(process.cwd(), "data");
+  return process.env.PORTFOLIO_DATA_DIR || path.join(process.cwd(), "data");
 }
 
 export async function readJsonStore<T>(

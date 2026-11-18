@@ -5,7 +5,9 @@ import path from "node:path";
 import { before, describe, it } from "node:test";
 import {
   addBlog,
+  deleteBlog,
   getBlogs,
+  updateBlog,
   validateBlogInput,
 } from "./blogs";
 
@@ -99,5 +101,44 @@ describe("blogs store", () => {
     assert.deepEqual(result, { ok: false, reason: "duplicate-slug" });
     const after = await getBlogs();
     assert.equal(after.length, before.length);
+  });
+
+  it("updates content but keeps the slug and publish date", async () => {
+    const original = (await getBlogs()).find((blog) => blog.slug === "test-post");
+    const result = await updateBlog("test-post", {
+      title: "Test Post v2",
+      summary: "Updated summary",
+      content: "Updated body.",
+    });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.blog.slug, "test-post");
+      assert.equal(result.blog.title, "Test Post v2");
+      assert.equal(result.blog.publishedAt, original?.publishedAt);
+    }
+    const stored = (await getBlogs()).find((blog) => blog.slug === "test-post");
+    assert.equal(stored?.summary, "Updated summary");
+  });
+
+  it("reports not-found on update", async () => {
+    const result = await updateBlog("nope", {
+      title: "x",
+      summary: "x",
+      content: "x",
+    });
+    assert.deepEqual(result, { ok: false, reason: "not-found" });
+  });
+
+  it("deletes a post and reports not-found afterwards", async () => {
+    const result = await deleteBlog("test-post");
+    assert.deepEqual(result, { ok: true });
+    assert.equal(
+      (await getBlogs()).some((blog) => blog.slug === "test-post"),
+      false,
+    );
+    assert.deepEqual(await deleteBlog("test-post"), {
+      ok: false,
+      reason: "not-found",
+    });
   });
 });

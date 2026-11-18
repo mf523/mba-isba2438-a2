@@ -43,4 +43,3 @@ next-env.d.ts
 # runtime JSON data stores
 /data/*.json
 /data/.session-secret
-!/.env.example

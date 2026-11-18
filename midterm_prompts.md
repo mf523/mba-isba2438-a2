@@ -76,6 +76,8 @@ Finish with anything that failed, anything you couldn't check, and what you're l
 
 ### 3a. Prompt: build the idea board
 
+Check below requirements for stage 2.1, adjust the plan accordingly.
+
 Add a new feature to the studio: an idea board. An idea is a piece of content that isn't published yet: a title, a one-line summary and a body, meant to become either a blog post or a project. Ideas are kept on the server, and the page reaches them through an API. Next I'll add an AI assistant that suggests ideas, so each idea also records where it came from: written by hand, suggested by the assistant, or suggested from an image.
 
 Give ideas their own JSON store, built the same way as blogs: types and a couple of placeholder seed entries in src/data/, and the store, validation and data functions in src/lib/. Use the length limits that blog posts and projects already enforce for their own fields, so an idea can become either one later without being cut down.
@@ -91,6 +93,8 @@ Page at /admin/ideas, in the admin navigation. It's a client component that load
 Leave editing and deleting ideas on screen for the next stage, when I build the screens for every content type together. Add unit tests for the store and validation.
 
 ### 3b. Prompt: add the multimodal assistant
+
+Check below requirements for stage 2.2, adjust the plan accordingly.
 
 Add an AI assistant to the idea board. I describe what I want to write, optionally start from a saved brief and optionally attach an image, such as a screenshot of a project or a photo, and the assistant suggests a title, a one-line summary and a body. The suggestion appears in the idea form, where I can edit it and then save it as an idea. The assistant never saves or publishes anything by itself.
 
@@ -121,6 +125,8 @@ Finish with anything that failed, anything you couldn't check, and what you're l
 
 ### 4a. Prompt: the API
 
+Check below requirements for stage 3.1, adjust the plan accordingly.
+
 Bring projects, blog posts and contact submissions up to the same level as ideas, so that each can be listed, read individually, created, updated and deleted through the API, with every change saved through the existing JSON stores in src/lib/. Projects need a new /api/projects resource; blogs and contacts need the methods they're missing. Move the existing handlers onto the shared helpers from the ideas API so all four resources log and respond alike. This step is the API and data layer only; the screens come next.
 
 Decisions I've made:
@@ -135,6 +141,8 @@ One thing to watch: the project list is cached with "use cache" and a cache tag 
 Extend the existing unit tests in src/lib/ to cover the new update and delete functions.
 
 ### 4b. Prompt: the studio screens
+
+Check below requirements for stage 3.2, adjust the plan accordingly.
 
 Build the studio screens for managing all four content types through the API: projects, blog posts, contact submissions and ideas. On each screen I should be able to see the list, create an item, edit one and delete one.
 
@@ -166,6 +174,8 @@ Report the problems as a numbered list, most serious first, with steps to reprod
 ## 5. Componentize
 
 ### 5a. Prompt: refactor into components
+
+Check below requirements for stage 4, adjust the plan accordingly.
 
 Do a refactoring pass to turn repeated UI into reusable components. Nothing should behave or look different afterwards.
 

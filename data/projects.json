@@ -24,27 +24,10 @@
     "repoUrl": "https://github.com/example/task-tracker"
   },
   {
-    "slug": "my-new-project",
-    "title": "my new project",
-    "summary": "my new project summary",
-    "description": "brilliant project",
-    "techStack": [
-      "sql",
-      "ai"
-    ],
-    "repoUrl": "https://test.com",
-    "liveUrl": "https://test.com/test"
-  },
-  {
-    "slug": "test-project1",
-    "title": "test project1",
-    "summary": "tes test test",
-    "description": "xxxxxxxx",
-    "techStack": [
-      "sql",
-      "ai"
-    ],
-    "repoUrl": "https://test.com",
-    "liveUrl": "https://test.com/test"
+    "slug": "test",
+    "title": "Demystifying the Linux Kernel: A Visual Guide to User Space and Hardware",
+    "summary": "A friendly, diagram-driven explainer that walks developers through how applications, the GNU C Library, system calls, kernel subsystems, and hardware interact in Linux.",
+    "description": "This project is a visual explainer that breaks down the Linux architecture shown in the attached diagram. It's written for developers who want a clear, friendly walkthrough of what happens behind the scenes when an application runs on Linux.",
+    "techStack": []
   }
 ]
