@@ -15,6 +15,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
         <span className="admin-badge">Admin mode</span>
         <nav aria-label="Admin navigation" className="admin-nav">
           <Link href="/admin/add-project">Add project</Link>
+          <Link href="/admin/briefs">Briefs</Link>
           <Link href="/admin/about-page">About page</Link>
           <Link href="/admin/site-config">Site config</Link>
           <Link href="/admin/blogs">Blog posts</Link>
