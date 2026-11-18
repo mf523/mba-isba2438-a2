@@ -6,9 +6,9 @@ import {
   validateAssistantRequest,
   type AssistantImageType,
 } from "@/lib/ai";
-import { logApiCall, requireAdmin } from "@/lib/api";
+import { bodySizeResponse, logApiCall, requireAdmin, withRoute } from "@/lib/api";
 
-export async function GET(request: Request) {
+export const GET = withRoute(async (request: Request) => {
   const denied = await requireAdmin();
   if (denied) {
     logApiCall(request, denied.status);
@@ -16,12 +16,16 @@ export async function GET(request: Request) {
   }
   logApiCall(request, 200);
   return NextResponse.json(
-    { ok: true, configured: isAssistantConfigured(), provider: getAssistantProvider() },
+    {
+      ok: true,
+      configured: isAssistantConfigured(),
+      provider: getAssistantProvider(),
+    },
     { headers: { "cache-control": "no-store" } },
   );
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   const denied = await requireAdmin();
   if (denied) {
     logApiCall(request, denied.status);
@@ -38,6 +42,12 @@ export async function POST(request: Request) {
       },
       { status: 503 },
     );
+  }
+
+  const tooLarge = bodySizeResponse(request);
+  if (tooLarge) {
+    logApiCall(request, 413);
+    return tooLarge;
   }
 
   let form: FormData;
@@ -60,7 +70,11 @@ export async function POST(request: Request) {
   const hasBrief = briefTitle.length > 0 || briefKeyPoints.length > 0;
 
   const imageFile = form.get("image");
-  let image: { mediaType: AssistantImageType; base64: string; sizeBytes: number } | null = null;
+  let image: {
+    mediaType: AssistantImageType;
+    base64: string;
+    sizeBytes: number;
+  } | null = null;
   if (
     imageFile &&
     typeof imageFile === "object" &&
@@ -87,18 +101,29 @@ export async function POST(request: Request) {
     targetType,
     notes,
     brief: hasBrief
-      ? { title: briefTitle, audience: briefAudience, tone: briefTone, keyPoints: briefKeyPoints }
+      ? {
+          title: briefTitle,
+          audience: briefAudience,
+          tone: briefTone,
+          keyPoints: briefKeyPoints,
+        }
       : null,
     image: image ? { mediaType: image.mediaType, base64: image.base64 } : null,
   });
 
   if (outcome.status === "refusal") {
     logApiCall(request, 502);
-    return NextResponse.json({ ok: false, message: outcome.message }, { status: 502 });
+    return NextResponse.json(
+      { ok: false, message: outcome.message },
+      { status: 502 },
+    );
   }
   if (outcome.status === "error") {
     logApiCall(request, 502);
-    return NextResponse.json({ ok: false, message: outcome.message }, { status: 502 });
+    return NextResponse.json(
+      { ok: false, message: outcome.message },
+      { status: 502 },
+    );
   }
 
   logApiCall(request, 200);
@@ -106,4 +131,4 @@ export async function POST(request: Request) {
     { ok: true, suggestion: outcome.suggestion },
     { headers: { "cache-control": "no-store" } },
   );
-}
+});

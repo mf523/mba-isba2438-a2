@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { logApiCall, parseJsonBody, requireAdmin } from "@/lib/api";
+import { logApiCall, parseJsonBody, requireAdmin, withRoute } from "@/lib/api";
 import {
   addProject,
   getProjects,
@@ -8,16 +8,16 @@ import {
 } from "@/lib/projects";
 import { slugify } from "@/lib/validation";
 
-export async function GET(request: Request) {
+export const GET = withRoute(async (request: Request) => {
   const projects = await getProjects();
   logApiCall(request, 200);
   return NextResponse.json(
     { ok: true, projects },
     { headers: { "cache-control": "no-store" } },
   );
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   const denied = await requireAdmin();
   if (denied) {
     logApiCall(request, denied.status);
@@ -76,5 +76,8 @@ export async function POST(request: Request) {
   }
 
   logApiCall(request, 201);
-  return NextResponse.json({ ok: true, project: result.project }, { status: 201 });
-}
+  return NextResponse.json(
+    { ok: true, project: result.project },
+    { status: 201 },
+  );
+});

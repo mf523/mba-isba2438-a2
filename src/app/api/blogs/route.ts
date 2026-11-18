@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
-import { logApiCall, parseJsonBody, requireAdmin } from "@/lib/api";
-import {
-  addBlog,
-  getBlogs,
-  validateBlogInput,
-} from "@/lib/blogs";
+import { logApiCall, parseJsonBody, requireAdmin, withRoute } from "@/lib/api";
+import { addBlog, getBlogs, validateBlogInput } from "@/lib/blogs";
 import { slugify } from "@/lib/validation";
 
-export async function GET(request: Request) {
+export const GET = withRoute(async (request: Request) => {
   const blogs = await getBlogs();
   logApiCall(request, 200);
   return NextResponse.json(
     { ok: true, blogs },
     { headers: { "cache-control": "no-store" } },
   );
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   const denied = await requireAdmin();
   if (denied) {
     logApiCall(request, denied.status);
@@ -39,10 +35,7 @@ export async function POST(request: Request) {
   const fieldErrors = validateBlogInput({ title, slug, summary, content });
   if (Object.keys(fieldErrors).length > 0) {
     logApiCall(request, 400);
-    return NextResponse.json(
-      { ok: false, fieldErrors },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false, fieldErrors }, { status: 400 });
   }
 
   const result = await addBlog({ slug, title, summary, content });
@@ -62,4 +55,4 @@ export async function POST(request: Request) {
     { ok: true, blog: result.blog },
     { status: 201, headers: { "cache-control": "no-store" } },
   );
-}
+});

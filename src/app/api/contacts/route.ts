@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { logApiCall, parseJsonBody, requireAdmin } from "@/lib/api";
+import { logApiCall, parseJsonBody, requireAdmin, withRoute } from "@/lib/api";
 import {
   getContactSubmissions,
   saveContactSubmission,
   validateContactInput,
 } from "@/lib/contact-submissions";
 
-export async function GET(request: Request) {
+export const GET = withRoute(async (request: Request) => {
   const denied = await requireAdmin();
   if (denied) {
     logApiCall(request, denied.status);
@@ -21,9 +21,9 @@ export async function GET(request: Request) {
     { ok: true, submissions: sorted },
     { headers: { "cache-control": "no-store" } },
   );
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   const parsed = await parseJsonBody(request);
   if (!parsed.ok) {
     logApiCall(request, parsed.response.status);
@@ -60,4 +60,4 @@ export async function POST(request: Request) {
       { status: 500, headers: { "cache-control": "no-store" } },
     );
   }
-}
+});

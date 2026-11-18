@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { isIdeaOrigin, isIdeaTargetType } from "@/data/ideas";
 import { addIdea, listIdeas, validateIdeaInput } from "@/lib/ideas";
-import { logApiCall, parseJsonBody, requireAdmin } from "@/lib/api";
+import { logApiCall, parseJsonBody, requireAdmin, withRoute } from "@/lib/api";
 
-export async function GET(request: Request) {
+export const GET = withRoute(async (request: Request) => {
   const denied = await requireAdmin();
   if (denied) {
     logApiCall(request, denied.status);
@@ -15,9 +15,9 @@ export async function GET(request: Request) {
     { ok: true, ideas },
     { headers: { "cache-control": "no-store" } },
   );
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRoute(async (request: Request) => {
   const denied = await requireAdmin();
   if (denied) {
     logApiCall(request, denied.status);
@@ -34,7 +34,8 @@ export async function POST(request: Request) {
   const title = typeof input.title === "string" ? input.title.trim() : "";
   const summary = typeof input.summary === "string" ? input.summary.trim() : "";
   const body = typeof input.body === "string" ? input.body.trim() : "";
-  const targetType = typeof input.targetType === "string" ? input.targetType.trim() : "";
+  const targetType =
+    typeof input.targetType === "string" ? input.targetType.trim() : "";
   const origin = isIdeaOrigin(input.origin) ? input.origin : "hand";
 
   const fieldErrors = validateIdeaInput({ title, summary, body, targetType });
@@ -51,4 +52,4 @@ export async function POST(request: Request) {
   const idea = await addIdea({ title, summary, body, targetType, origin });
   logApiCall(request, 201);
   return NextResponse.json({ ok: true, idea }, { status: 201 });
-}
+});
