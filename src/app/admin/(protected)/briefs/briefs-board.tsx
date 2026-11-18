@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useSyncExternalStore } from "react";
+import FormFeedback from "@/components/form-feedback";
 import BriefForm from "./brief-form";
 import BriefItem from "./brief-item";
 import {
@@ -98,9 +99,7 @@ export default function BriefsBoard() {
       </p>
 
       {notice ? (
-        <p className="form-feedback form-feedback-success" role="status" aria-live="polite">
-          {notice}
-        </p>
+        <FormFeedback status="success" message={notice} />
       ) : null}
 
       {unreadable ? (

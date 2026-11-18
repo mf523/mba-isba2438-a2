@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import Field from "@/components/field";
+import TextareaField from "@/components/textarea-field";
 import { submitContact } from "./actions";
 import { initialContactFormState } from "./form-state";
 
@@ -60,55 +62,26 @@ export default function ContactForm() {
           {state.message}
         </p>
       ) : null}
-      <div className="field-group">
-        <label htmlFor="name">Name</label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          aria-invalid={state.fieldErrors.name ? true : undefined}
-          aria-describedby={state.fieldErrors.name ? "name-error" : undefined}
-        />
-        {state.fieldErrors.name ? (
-          <p className="field-error" id="name-error">
-            {state.fieldErrors.name}
-          </p>
-        ) : null}
-      </div>
-      <div className="field-group">
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          aria-invalid={state.fieldErrors.email ? true : undefined}
-          aria-describedby={
-            state.fieldErrors.email ? "email-error" : undefined
-          }
-        />
-        {state.fieldErrors.email ? (
-          <p className="field-error" id="email-error">
-            {state.fieldErrors.email}
-          </p>
-        ) : null}
-      </div>
-      <div className="field-group">
-        <label htmlFor="message">Message</label>
-        <textarea
-          id="message"
-          name="message"
-          rows={5}
-          aria-invalid={state.fieldErrors.message ? true : undefined}
-          aria-describedby={
-            state.fieldErrors.message ? "message-error" : undefined
-          }
-        />
-        {state.fieldErrors.message ? (
-          <p className="field-error" id="message-error">
-            {state.fieldErrors.message}
-          </p>
-        ) : null}
-      </div>
+      <Field
+        id="name"
+        name="name"
+        label="Name"
+        error={state.fieldErrors.name}
+      />
+      <Field
+        id="email"
+        name="email"
+        label="Email"
+        type="email"
+        error={state.fieldErrors.email}
+      />
+      <TextareaField
+        id="message"
+        name="message"
+        label="Message"
+        rows={5}
+        error={state.fieldErrors.message}
+      />
       <button className="submit-button" type="submit" disabled={isPending}>
         {isPending ? "Sending..." : "Send Message"}
       </button>

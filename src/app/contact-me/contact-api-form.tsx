@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import type { ContactFieldErrors } from "@/lib/contact-submissions";
+import Field from "@/components/field";
+import TextareaField from "@/components/textarea-field";
 import FormFeedback from "@/components/form-feedback";
 
 interface ApiFormState {
@@ -71,52 +73,31 @@ export default function ContactApiForm() {
     }
   }
 
-  const field = (name: keyof ContactFieldErrors, id: string) => ({
-    "aria-invalid": state.fieldErrors[name] ? true : undefined,
-    "aria-describedby": state.fieldErrors[name] ? `${id}-error` : undefined,
-  });
-  const error = (name: keyof ContactFieldErrors, id: string) =>
-    state.fieldErrors[name] ? (
-      <p className="field-error" id={`${id}-error`}>
-        {state.fieldErrors[name]}
-      </p>
-    ) : null;
-
   return (
     <form ref={formRef} onSubmit={handleSubmit} noValidate>
       {state.status !== "idle" ? (
         <FormFeedback status={state.status} message={state.message} />
       ) : null}
-      <div className="field-group">
-        <label htmlFor="api-name">Name</label>
-        <input
-          id="api-name"
-          name="name"
-          type="text"
-          {...field("name", "api-name")}
-        />
-        {error("name", "api-name")}
-      </div>
-      <div className="field-group">
-        <label htmlFor="api-email">Email</label>
-        <input
-          id="api-email"
-          name="email"
-          type="email"
-          {...field("email", "api-email")}
-        />
-        {error("email", "api-email")}
-      </div>
-      <div className="field-group">
-        <label htmlFor="api-message">Message</label>
-        <textarea
-          id="api-message"
-          name="message"
-          rows={5}
-          {...field("message", "api-message")}
-        />
-        {error("message", "api-message")}
-      </div>
+      <Field
+        id="api-name"
+        name="name"
+        label="Name"
+        error={state.fieldErrors.name}
+      />
+      <Field
+        id="api-email"
+        name="email"
+        label="Email"
+        type="email"
+        error={state.fieldErrors.email}
+      />
+      <TextareaField
+        id="api-message"
+        name="message"
+        label="Message"
+        rows={5}
+        error={state.fieldErrors.message}
+      />
       <button className="submit-button" type="submit" disabled={isPending}>
         {isPending ? "Sending..." : "Send Message"}
       </button>

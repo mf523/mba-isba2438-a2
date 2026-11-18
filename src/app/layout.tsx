@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { getSiteConfig } from "@/lib/site-config";
+import SiteHeader from "@/components/site-header";
+import SiteFooter from "@/components/site-footer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,16 +28,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/about-me", label: "About Me" },
-  { href: "/projects", label: "My Projects" },
-  { href: "/blogs", label: "Blogs" },
-  { href: "/contact-me-server-form", label: "Contact" },
-  { href: "/contact-me", label: "Contact (API)" },
-  { href: "/admin", label: "Admin" },
-];
-
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const siteConfig = await getSiteConfig();
 
@@ -45,26 +37,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main-content" className="skip-link">
           Skip to content
         </a>
-        <header className="site-header">
-          <div className="header-inner">
-            {siteConfig.tagline ? (
-              <span className="brand-tagline">{siteConfig.tagline}</span>
-            ) : null}
-            <nav aria-label="Main navigation">
-              <ul className="nav-list">
-                {navItems.map((item) => (
-                  <li key={item.href}>
-                    <a href={item.href}>{item.label}</a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
-        </header>
+        <SiteHeader tagline={siteConfig.tagline || undefined} />
         <main className="page-main" id="main-content">{children}</main>
-        <footer className="site-footer">
-          <p>{siteConfig.footerText}</p>
-        </footer>
+        <SiteFooter text={siteConfig.footerText} />
       </body>
     </html>
   );

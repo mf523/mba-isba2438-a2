@@ -9,7 +9,7 @@ export default function BlogsPage() {
   return (
     <>
       <h1>Blogs</h1>
-      <p>Short write-ups loaded from the /api/blogs endpoint.</p>
+      <p>Short write-ups, newest first.</p>
       <BlogsList />
     </>
   );

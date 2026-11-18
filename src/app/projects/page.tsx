@@ -13,7 +13,7 @@ export default async function Projects() {
     <>
       <h1>My Projects</h1>
       <p>A collection of projects I have built. Click one for details.</p>
-      <ul className="card-list">
+      <ul className="card-list grid-two">
         {projects.map((project) => (
           <ProjectCard key={project.slug} project={project} />
         ))}

@@ -146,19 +146,49 @@ Notes:
 
 Caching constraints (confirmed against the bundled Next docs): public `/` and `/projects*` pages use `"use cache"` + `cacheTag`; project writes must call the two-argument `revalidateTag("projects", { expire: 0 })` (single-arg is deprecated; `updateTag` is Server-Action-only and cannot be used from route handlers). Revalidation refreshes the server cache but not the client router cache (~5 min staleness, mitigated by `<a>` nav already in place). Studio screens are client-fetch and always fresh. Alternative (convert public project pages to client-fetch, losing prerendering) — recommended against. Confirm invalidation against a production build before closing 3.1 (dev does not cache the same way).
 
-## Stage 4 — Componentize
+## Stage 4 — Componentize (BUILT)
 
-| Component | Replaces |
+Refactoring pass only: repeated UI becomes reusable components. Nothing behaves or looks different afterwards; components live in `src/components/` with typed props; no server component becomes a client component. Deliverable includes a component inventory (what each is, its props, where it's used).
+
+Confirmed repetition (checked in code):
+- The public blogs list (`src/app/blogs/blogs-list.tsx`) renders blog items inline — the only inline content rendering left (ideas already use `IdeaCard`; projects use `ProjectCard`).
+- Date formatting: `toLocaleString("en-US")` in 4 files (blog-item, contacts-board, brief-item, idea-card) + `toLocaleDateString` long form in the public blogs list.
+- Tag markup: `<span className="tag">` repeated in 7 files; real multi-tag lists exist in project-item (tech stack), idea-card (origin + target) and brief-item (type + tone).
+- Header, nav (inline `navItems`) and footer are written directly in `src/app/layout.tsx`.
+- Both public contact forms (`contact-me/contact-api-form.tsx`, `contact-me-server-form/contact-form.tsx`) build their own field markup instead of the shared `Field`/`TextareaField`.
+- All 7 admin pages repeat: `<h1>`, intro paragraph, `Suspense` + `AdminGate` wrapper (metadata export stays per page).
+
+| Component | Change |
 |---|---|
-| `src/components/site-header.tsx` | inline header in `src/app/layout.tsx` |
-| `src/components/blog-card.tsx` | inline blog list item in `blogs-list.tsx` |
-| `src/components/submit-button.tsx` | pending-label submit buttons in 5 forms |
-| `src/components/idea-card.tsx` | created in stage 2a at first use (the rubric's custom-feature component, fed via props) |
-| `src/components/field.tsx`, `textarea-field.tsx`, `delete-button.tsx` | created in stage 3.2 at first use |
-| `src/components/project-card.tsx`, `form-feedback.tsx` | already exist |
+| `src/components/blog-card.tsx` (new) | extracted from the public blogs list: one blog via props (linked title, summary, long-form date). The list keeps fetching |
+| `src/components/site-header.tsx` + `site-footer.tsx` (new, server) | extracted from the root layout; tagline/footer text passed as props from the layout's existing `getSiteConfig()` call; nav items stay a constant inside the header |
+| `src/components/admin-page.tsx` (new, server) | wraps `h1` + optional intro + `Suspense`/`AdminGate` for all 7 admin pages; each page keeps its own `metadata` export and passes `title`/`intro` |
+| `src/components/tag-list.tsx` (new) | renders `items: string[]` as tag spans; used where there is a real list (tech stack, idea and brief tag pairs). Single-tag meta lines stay plain spans — wrapping them would be indirection, not de-duplication |
+| `src/lib/format.ts` (new, pure) | `formatDateTime(iso)` + `formatDate(iso)` replacing the 5 inline formatting sites |
+| `field.tsx` / `textarea-field.tsx` | both public contact forms switch onto them (same markup/classes already) |
+| `idea-card.tsx` | stays exactly as it is: purely presentational, typed props for the idea and optional `onEdit`/`onDelete` actions, no fetching, no state — this is the rubric's parent-to-child props demo |
 
-Approach: build `Field`, `BlogCard`, and `IdeaCard` during stages 2–3 at their first use; stage 4 sweeps the rest. No behaviour changes.
+Deliberately skipped (indirection, not duplication — reported per the requirement):
+- The four admin boards repeat a load/error/retry scaffolding, and project/blog delete-fetches live in their item components. Unifying them would be the generic CRUD framework the requirement explicitly excludes; each board stays readable top to bottom.
+- `idea-form`'s controlled `field()`/`error()` helpers are not switched to the uncontrolled `Field` component — the assistant flow needs controlled values, and converting it risks behavior change for zero visible gain.
+- `briefs-board`'s raw success `<p>` becomes a `FormFeedback` call (identical markup) — noted, not a new component.
+
+Verification: `npm run check` + full unit suite + the stage 3.2 e2e script rerun unchanged (same PASS list proves nothing behaves differently), plus a spot-check that public and admin pages render identical markup (compare pre/post HTML of `/` and `/admin/projects`).
 
 ## Sequencing
 
-Stages run 1 → 2a → 2b → 3.1 → 3.2 → 4, each a full build → review → revisions cycle, all checks green before moving on. Everything must be demonstrable in a ≤10-minute video: LocalStorage persistence across refresh, API invocations with server logs (one line per request via the shared module), HTTP 201 on creation, and the custom-feature component receiving data via props.
+Stages run 1 → 2a → 2b → 3.1 → 3.2 → 4 → 5, each a full build → review → revisions cycle, all checks green before moving on. Everything must be demonstrable in a ≤10-minute video: LocalStorage persistence across refresh, API invocations with server logs (one line per request via the shared module), HTTP 201 on creation, and the custom-feature component receiving data via props.
+
+## Stage 5 — Design polish (BUILT)
+
+Outcome of the design review (contrast audit + page-by-page layout pass). Changes are intentional visual improvements.
+
+- Tokens in `globals.css`: full color/radius token set, `--measure` for prose, Geist Mono for meta dates; **dark mode** via `prefers-color-scheme` token overrides.
+- AA fixes (verified by computed contrast audit, light and dark): primary button white-on-`--accent-dark` 6.19:1 (was 2.38), header tagline solid white 6.19:1 (was 3.32), card titles use `--accent` (4.68 light / 5.03 dark), mobile nav tap targets 45px (was 23px), zero horizontal overflow at 390px.
+- Type scale: h1 34 / h2 24 / card h3 20 (explicit) / meta 12 mono; `:where(.card) p` fixes the `.card p` specificity bug that blocked `.card-meta` styling.
+- Home: hero with tagline + "View projects"/"Get in touch" CTAs; featured grid capped at 3 + "All projects →".
+- Projects list + home: 2-column grid ≥720px; public cards now show tech pills + "Details →".
+- Project detail: back link, tech pills under the title, one "Links" row (repository / live demo buttons, new tab) replacing two `h2` link sections.
+- Blog detail: `72ch` measure, back link, skeleton loading state, server-side `generateMetadata` (title = post title).
+- Visitor-facing copy on `/blogs` and both contact pages (no more endpoint/JSON internals in the lede; the API page is framed as a demo).
+- Admin: active nav state via `aria-current` (`admin-nav.tsx` client component); contacts table wrapped in `.table-scroll` for mobile.

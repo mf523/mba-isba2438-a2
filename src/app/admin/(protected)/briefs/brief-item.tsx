@@ -1,5 +1,7 @@
 "use client";
 
+import TagList from "@/components/tag-list";
+import { formatDateTime } from "@/lib/format";
 import {
   CONTENT_TYPE_OPTIONS,
   TONE_OPTIONS,
@@ -39,8 +41,7 @@ export default function BriefItem({
         </div>
       </div>
       <p className="brief-meta">
-        <span className="tag">{typeLabel(brief.contentType)}</span>
-        <span className="tag">{toneLabel(brief.tone)}</span>
+        <TagList items={[typeLabel(brief.contentType), toneLabel(brief.tone)]} />
         <span className="brief-audience">for {brief.audience}</span>
       </p>
       {points.length > 0 ? (
@@ -50,7 +51,7 @@ export default function BriefItem({
           ))}
         </ul>
       ) : null}
-      <p className="card-meta">Updated {new Date(brief.updatedAt).toLocaleString("en-US")}</p>
+      <p className="card-meta">Updated {formatDateTime(brief.updatedAt)}</p>
     </li>
   );
 }

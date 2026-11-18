@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { formatDate } from "@/lib/format";
 import type { Blog } from "@/data/blogs";
 
 type PostState =
@@ -49,7 +50,12 @@ export default function BlogPostContent() {
   }, [slug]);
 
   if (state.status === "loading") {
-    return <p className="blogs-state">Loading post…</p>;
+    return (
+      <>
+        <div className="skeleton-card card" />
+        <p className="blogs-state">Loading post…</p>
+      </>
+    );
   }
   if (state.status === "not-found") {
     return (
@@ -66,15 +72,12 @@ export default function BlogPostContent() {
   }
 
   return (
-    <>
+    <article className="prose-measure">
+      <Link className="back-link" href="/blogs">
+        ← Back to all blog posts
+      </Link>
       <h1>{state.blog.title}</h1>
-      <p className="card-meta">
-        {new Date(state.blog.publishedAt).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}
-      </p>
+      <p className="card-meta">{formatDate(state.blog.publishedAt)}</p>
       <p>{state.blog.summary}</p>
       {state.blog.content
         .split(/\n{2,}/)
@@ -83,6 +86,6 @@ export default function BlogPostContent() {
         .map((paragraph) => (
           <p key={paragraph.slice(0, 24)}>{paragraph}</p>
         ))}
-    </>
+    </article>
   );
 }

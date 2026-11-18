@@ -1,6 +1,7 @@
 "use client";
 
 import DeleteButton from "@/components/delete-button";
+import { formatDateTime } from "@/lib/format";
 import type { Blog } from "@/data/blogs";
 
 export default function BlogItem({
@@ -47,7 +48,7 @@ export default function BlogItem({
       <p className="brief-meta">
         <span className="tag">/blogs/{blog.slug}</span>
         <span className="brief-audience">
-          published {new Date(blog.publishedAt).toLocaleString("en-US")}
+          published {formatDateTime(blog.publishedAt)}
         </span>
       </p>
     </li>

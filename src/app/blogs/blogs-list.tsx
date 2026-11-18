@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import BlogCard from "@/components/blog-card";
 import type { Blog } from "@/data/blogs";
 
 type LoadState =
@@ -36,7 +37,15 @@ export default function BlogsList() {
   }, []);
 
   if (state.status === "loading") {
-    return <p className="blogs-state">Loading posts…</p>;
+    return (
+      <>
+        <ul className="card-list" aria-hidden="true">
+          <li className="card skeleton-card" />
+          <li className="card skeleton-card" />
+        </ul>
+        <p className="blogs-state">Loading posts…</p>
+      </>
+    );
   }
   if (state.status === "error") {
     return (
@@ -52,21 +61,7 @@ export default function BlogsList() {
   return (
     <ul className="card-list">
       {state.blogs.map((blog) => (
-        <li key={blog.slug} className="card">
-          <h3>
-            <a className="inline-link" href={`/blogs/${blog.slug}`}>
-              {blog.title}
-            </a>
-          </h3>
-          <p>{blog.summary}</p>
-          <p className="card-meta">
-            {new Date(blog.publishedAt).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
-        </li>
+        <BlogCard key={blog.slug} blog={blog} />
       ))}
     </ul>
   );

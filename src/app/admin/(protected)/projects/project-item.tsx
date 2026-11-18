@@ -1,6 +1,7 @@
 "use client";
 
 import DeleteButton from "@/components/delete-button";
+import TagList from "@/components/tag-list";
 import type { Project } from "@/data/projects";
 
 export default function ProjectItem({
@@ -46,11 +47,7 @@ export default function ProjectItem({
       <p>{project.summary}</p>
       {project.techStack.length > 0 ? (
         <p className="brief-meta">
-          {project.techStack.map((tech) => (
-            <span className="tag" key={tech}>
-              {tech}
-            </span>
-          ))}
+          <TagList items={project.techStack} />
         </p>
       ) : null}
       <p className="brief-audience">

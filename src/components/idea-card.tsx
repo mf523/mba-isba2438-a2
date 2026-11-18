@@ -4,6 +4,8 @@ import {
   IDEA_TARGET_TYPE_OPTIONS,
 } from "@/data/ideas";
 import DeleteButton from "@/components/delete-button";
+import TagList from "@/components/tag-list";
+import { formatDateTime } from "@/lib/format";
 
 const targetLabel = (value: Idea["targetType"]) =>
   IDEA_TARGET_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value;
@@ -37,10 +39,11 @@ export default function IdeaCard({
       </div>
       <p>{idea.summary}</p>
       <p className="brief-meta">
-        <span className="tag">{IDEA_ORIGIN_LABELS[idea.origin]}</span>
-        <span className="tag">{targetLabel(idea.targetType)}</span>
+        <TagList
+          items={[IDEA_ORIGIN_LABELS[idea.origin], targetLabel(idea.targetType)]}
+        />
         <span className="brief-audience">
-          updated {new Date(idea.updatedAt).toLocaleString("en-US")}
+          updated {formatDateTime(idea.updatedAt)}
         </span>
       </p>
       {onEdit ? (

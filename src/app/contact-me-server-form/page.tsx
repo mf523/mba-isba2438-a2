@@ -10,8 +10,8 @@ export default function ContactMeServerForm() {
     <>
       <h1>Contact Me</h1>
       <p>
-        Send me a message using the form below. Submissions are validated on
-        the server and saved to a JSON file.
+        Have a question or want to work together? Send me a message with the
+        form below.
       </p>
       <ContactForm />
     </>

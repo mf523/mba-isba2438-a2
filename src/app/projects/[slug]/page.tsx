@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { getProjectBySlug, getProjects } from "@/lib/projects";
+import TagList from "@/components/tag-list";
 
 export async function generateStaticParams() {
   return (await getProjects()).map((project) => ({ slug: project.slug }));
@@ -29,35 +31,39 @@ async function ProjectContent({
 
   return (
     <>
+      <Link className="back-link" href="/projects">
+        ← Back to all projects
+      </Link>
       <h1>{project.title}</h1>
-      <p>{project.description}</p>
-      <section>
-        <h2>Tech Stack</h2>
-        <ul className="tag-list">
-          {project.techStack.map((tech) => (
-            <li key={tech}>{tech}</li>
-          ))}
-        </ul>
-      </section>
-      {project.repoUrl ? (
-        <section>
-          <h2>Repository</h2>
-          <p>
-            <a className="inline-link" href={project.repoUrl}>
-              {project.repoUrl}
-            </a>
-          </p>
-        </section>
+      {project.techStack.length > 0 ? (
+        <p className="brief-meta">
+          <TagList items={project.techStack} />
+        </p>
       ) : null}
-      {project.liveUrl ? (
-        <section>
-          <h2>Live Demo</h2>
-          <p>
-            <a className="inline-link" href={project.liveUrl}>
-              {project.liveUrl}
+      <p>{project.description}</p>
+      {project.repoUrl || project.liveUrl ? (
+        <div className="detail-links">
+          {project.repoUrl ? (
+            <a
+              className="button-primary"
+              href={project.repoUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View repository
             </a>
-          </p>
-        </section>
+          ) : null}
+          {project.liveUrl ? (
+            <a
+              className="secondary-button"
+              href={project.liveUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Live demo
+            </a>
+          ) : null}
+        </div>
       ) : null}
     </>
   );

@@ -10,9 +10,9 @@ export default function ContactMeApi() {
     <>
       <h1>Contact Me (API)</h1>
       <p>
-        Send me a message using the form below. This form calls the
-        /api/contacts endpoint, which validates the input and saves it to the
-        same JSON file as the server form.
+        Have a question or want to work together? Send me a message with the
+        form below. This version of the form demonstrates a client-side fetch
+        to the /api/contacts endpoint.
       </p>
       <ContactApiForm />
     </>

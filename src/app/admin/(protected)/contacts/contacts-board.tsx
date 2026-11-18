@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import DeleteButton from "@/components/delete-button";
 import FormFeedback from "@/components/form-feedback";
+import { formatDateTime } from "@/lib/format";
 import type { ContactSubmission } from "@/lib/contact-submissions";
 
 type LoadState =
@@ -139,8 +140,9 @@ export default function ContactsBoard() {
             contact form appear here.
           </p>
         ) : (
-          <table className="admin-table">
-            <thead>
+          <div className="table-scroll">
+            <table className="admin-table">
+              <thead>
               <tr>
                 <th scope="col">Name</th>
                 <th scope="col">Email</th>
@@ -156,9 +158,7 @@ export default function ContactsBoard() {
                   <td>{submission.name}</td>
                   <td>{submission.email}</td>
                   <td>{submission.message}</td>
-                  <td>
-                    {new Date(submission.submittedAt).toLocaleString("en-US")}
-                  </td>
+                  <td>{formatDateTime(submission.submittedAt)}</td>
                   <td>
                     <span className="tag">
                       {submission.status === "archived" ? "Archived" : "New"}
@@ -180,7 +180,8 @@ export default function ContactsBoard() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )
       ) : null}
     </>
