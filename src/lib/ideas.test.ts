@@ -7,6 +7,7 @@ import {
   addIdea,
   deleteIdea,
   getIdeaById,
+  isUsableIdeaId,
   listIdeas,
   updateIdea,
   updateIdeaImage,
@@ -17,6 +18,21 @@ before(() => {
   process.env.PORTFOLIO_DATA_DIR = mkdtempSync(
     path.join(tmpdir(), "ideas-test-"),
   );
+});
+
+describe("isUsableIdeaId", () => {
+  it("accepts uuid ids and slug ids", () => {
+    assert.equal(isUsableIdeaId("0f7d6a1e-3f2b-4a9c-8d1e-2b3c4d5e6f7a"), true);
+    assert.equal(isUsableIdeaId("idea-component-library"), true);
+  });
+
+  it("rejects empty, oversized, or path-like ids", () => {
+    assert.equal(isUsableIdeaId(""), false);
+    assert.equal(isUsableIdeaId("   "), false);
+    assert.equal(isUsableIdeaId("../etc/passwd"), false);
+    assert.equal(isUsableIdeaId("a".repeat(101)), false);
+    assert.equal(isUsableIdeaId("bad id with spaces"), false);
+  });
 });
 
 describe("validateIdeaInput", () => {

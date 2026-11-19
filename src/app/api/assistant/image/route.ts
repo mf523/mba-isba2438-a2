@@ -3,7 +3,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { requestNarrativeImage } from "@/lib/ai";
 import { logApiCall, parseJsonBody, requireAdmin, withRoute } from "@/lib/api";
-import { getIdeaById, updateIdeaImage } from "@/lib/ideas";
+import { getIdeaById, isUsableIdeaId, updateIdeaImage } from "@/lib/ideas";
 import { dataDir } from "@/lib/json-store";
 
 export const POST = withRoute(async (request: Request) => {
@@ -20,7 +20,7 @@ export const POST = withRoute(async (request: Request) => {
   }
 
   const ideaId = typeof parsed.body.ideaId === "string" ? parsed.body.ideaId.trim() : "";
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ideaId)) {
+  if (!isUsableIdeaId(ideaId)) {
     logApiCall(request, 400);
     return NextResponse.json(
       { ok: false, message: "A saved idea id is required." },

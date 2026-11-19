@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { logApiCall, requireAdmin, withRoute } from "@/lib/api";
-import { getIdeaById } from "@/lib/ideas";
+import { getIdeaById, isUsableIdeaId } from "@/lib/ideas";
 import { dataDir } from "@/lib/json-store";
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -24,7 +24,7 @@ export const GET = withRoute(
     }
 
     const { ideaId } = await params;
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ideaId)) {
+    if (!isUsableIdeaId(ideaId)) {
       logApiCall(request, 400);
       return NextResponse.json(
         { ok: false, message: "Invalid idea id." },

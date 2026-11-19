@@ -45,6 +45,10 @@ export function listIdeas(): Promise<Idea[]> {
   return store.read();
 }
 
+export function isUsableIdeaId(id: string): boolean {
+  return /^[a-zA-Z0-9-]{1,100}$/.test(id.trim());
+}
+
 export async function getIdeaById(id: string): Promise<Idea | undefined> {
   const ideas = await listIdeas();
   return ideas.find((idea) => idea.id === id);
