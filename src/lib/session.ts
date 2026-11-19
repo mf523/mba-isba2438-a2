@@ -2,6 +2,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { dataDir } from "./json-store";
 
 const COOKIE_NAME = "admin_session";
@@ -108,6 +109,7 @@ export async function destroyAdminSession(): Promise<void> {
 }
 
 export async function isAdmin(): Promise<boolean> {
+  await connection();
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) {
