@@ -223,21 +223,32 @@ export default function IdeaBoard() {
           ) : (
             <>
               <div className="field-group">
-                <label htmlFor="idea-filter">Filter by type</label>
-                <select
-                  id="idea-filter"
-                  value={filter}
-                  onChange={(event) =>
-                    setFilter(event.target.value as Filter)
-                  }
+                <span className="field-label" id="idea-filter-label">
+                  Filter by type
+                </span>
+                <div
+                  className="pill-group"
+                  role="group"
+                  aria-labelledby="idea-filter-label"
                 >
-                  <option value="all">All types</option>
+                  <button
+                    type="button"
+                    aria-pressed={filter === "all"}
+                    onClick={() => setFilter("all")}
+                  >
+                    All
+                  </button>
                   {IDEA_TARGET_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={filter === option.value}
+                      onClick={() => setFilter(option.value)}
+                    >
                       {option.label}
-                    </option>
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
               {visible.length === 0 ? (
                 <p>No ideas of this type yet.</p>

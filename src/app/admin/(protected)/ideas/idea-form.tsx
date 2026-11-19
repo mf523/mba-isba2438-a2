@@ -266,19 +266,32 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
           </p>
         ) : null}
         <div className="field-group">
-          <label htmlFor="idea-brief">Start from a brief</label>
-          <select
-            id="idea-brief"
-            value={briefId}
-            onChange={(event) => applyBrief(event.target.value)}
+          <span className="field-label" id="idea-brief-label">
+            Start from a brief (optional)
+          </span>
+          <div
+            className="pill-group pill-group-wrap"
+            role="group"
+            aria-labelledby="idea-brief-label"
           >
-            <option value="">No brief — write your own seed</option>
+            <button
+              type="button"
+              aria-pressed={briefId === ""}
+              onClick={() => applyBrief("")}
+            >
+              Write my own
+            </button>
             {briefs.map((brief) => (
-              <option key={brief.id} value={brief.id}>
+              <button
+                key={brief.id}
+                type="button"
+                aria-pressed={briefId === brief.id}
+                onClick={() => applyBrief(brief.id)}
+              >
                 {brief.title}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
         </div>
         <div className="field-group">
           <label htmlFor="idea-seed">Your seed</label>
@@ -356,19 +369,26 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
       ) : null}
 
       <div className="field-group">
-        <label htmlFor="idea-type">This idea becomes *</label>
-        <select
-          id="idea-type"
-          value={targetType}
-          onChange={(event) => setTargetType(event.target.value as IdeaTargetType)}
-          {...field("targetType", "idea-type")}
+        <span className="field-label" id="idea-type-label">
+          This idea becomes *
+        </span>
+        <div
+          className="pill-group"
+          role="group"
+          aria-labelledby="idea-type-label"
+          aria-describedby={fieldErrors.targetType ? "idea-type-error" : undefined}
         >
           {IDEA_TARGET_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={targetType === option.value}
+              onClick={() => setTargetType(option.value)}
+            >
               {option.label}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
         {error("targetType", "idea-type")}
       </div>
       <div className="field-group">
