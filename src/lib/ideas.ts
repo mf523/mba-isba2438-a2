@@ -102,7 +102,7 @@ export function updateIdea(
 
 export function updateIdeaImage(
   id: string,
-  fields: { imagePrompt: string; imageUrl: string },
+  fields: { imagePrompt?: string; imageUrl?: string },
 ): Promise<Idea | undefined> {
   return store.update((current) => {
     const existing = current.find((idea) => idea.id === id);
@@ -111,8 +111,8 @@ export function updateIdeaImage(
     }
     const updated: Idea = {
       ...existing,
-      imagePrompt: fields.imagePrompt,
-      imageUrl: fields.imageUrl,
+      ...(fields.imagePrompt !== undefined ? { imagePrompt: fields.imagePrompt } : {}),
+      ...(fields.imageUrl !== undefined ? { imageUrl: fields.imageUrl } : {}),
       updatedAt: new Date().toISOString(),
     };
     return {

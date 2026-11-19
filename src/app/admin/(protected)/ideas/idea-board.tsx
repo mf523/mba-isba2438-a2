@@ -54,6 +54,24 @@ export default function IdeaBoard() {
         if (editor.mode === "edit" && editor.idea.id === updated.id) {
           setEditor({ mode: "edit", idea: updated });
         }
+      } else if (result.artworkPending && result.idea) {
+        const updated: Idea = result.idea;
+        setSavedNotice(
+          `The picture service is unreachable — the image prompt was saved for "${idea.title}". Try again later.`,
+        );
+        if (state.status === "ready") {
+          setState({
+            status: "ready",
+            ideas: state.ideas.map((candidate) =>
+              candidate.id === updated.id ? updated : candidate,
+            ),
+          });
+        } else {
+          load();
+        }
+        if (editor.mode === "edit" && editor.idea.id === updated.id) {
+          setEditor({ mode: "edit", idea: updated });
+        }
       } else {
         setSavedNotice(null);
         window.alert(

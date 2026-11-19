@@ -32,6 +32,13 @@ export default function IdeaCard({
           src={idea.imageUrl}
           alt={`Generated artwork for the idea "${idea.title}"`}
         />
+      ) : idea.imagePrompt ? (
+        <div className="idea-artwork-pending">
+          <p>Picture pending — the image service was unreachable.</p>
+          <p className="idea-artwork-pending-prompt">
+            Prompt saved: {idea.imagePrompt}
+          </p>
+        </div>
       ) : null}
       <div className="brief-card-head">
         <h3>{idea.title}</h3>

@@ -150,6 +150,10 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
         onSaved(result.idea, editing ? "edit" : "create");
         setStatus("success");
         setMessage("Picture generated and attached to the idea.");
+      } else if (result.artworkPending && result.idea) {
+        onSaved(result.idea, editing ? "edit" : "create");
+        setStatus("success");
+        setMessage(result.message);
       } else {
         setStatus("error");
         setMessage(

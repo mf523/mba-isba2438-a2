@@ -164,4 +164,32 @@ describe("ideas store", () => {
     const reread = await getIdeaById(created.id);
     assert.equal(reread?.imageUrl, `/api/images/${created.id}`);
   });
+
+  it("persists the prompt alone when the image provider fails, keeping an existing image", async () => {
+    const created = await addIdea({
+      title: "Pending art",
+      summary: "Provider down.",
+      body: "A narrative that deserves a picture.",
+      targetType: "blog-post",
+      origin: "assistant",
+    });
+    const pending = await updateIdeaImage(created.id, {
+      imagePrompt: "Editorial illustration for a developer blog post. Subject: A narrative that deserves a picture.",
+    });
+    assert.equal(pending?.imagePrompt?.includes("deserves a picture"), true);
+    assert.equal(pending?.imageUrl, undefined);
+    assert.equal(pending?.imagePrompt !== undefined, true);
+
+    const withImage = await updateIdeaImage(created.id, {
+      imagePrompt: "first prompt",
+      imageUrl: `/api/images/${created.id}`,
+    });
+    assert.equal(withImage?.imageUrl, `/api/images/${created.id}`);
+
+    const failedRegen = await updateIdeaImage(created.id, {
+      imagePrompt: "second prompt",
+    });
+    assert.equal(failedRegen?.imageUrl, `/api/images/${created.id}`);
+    assert.equal(failedRegen?.imagePrompt, "second prompt");
+  });
 });

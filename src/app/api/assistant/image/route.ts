@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { requestNarrativeImage } from "@/lib/ai";
+import { buildImagePrompt, requestNarrativeImage } from "@/lib/ai";
 import { logApiCall, parseJsonBody, requireAdmin, withRoute } from "@/lib/api";
 import { getIdeaById, isUsableIdeaId, updateIdeaImage } from "@/lib/ideas";
 import { dataDir } from "@/lib/json-store";
@@ -46,8 +46,18 @@ export const POST = withRoute(async (request: Request) => {
 
   const outcome = await requestNarrativeImage(idea.body);
   if (outcome.status === "error") {
+    const imagePrompt = buildImagePrompt(idea.body);
+    const updated = await updateIdeaImage(ideaId, { imagePrompt });
     logApiCall(request, 502);
-    return NextResponse.json({ ok: false, message: outcome.message }, { status: 502 });
+    return NextResponse.json(
+      {
+        ok: false,
+        message: `${outcome.message} The image prompt was saved with the idea — try again later.`,
+        idea: updated,
+        artworkPending: true,
+      },
+      { status: 502 },
+    );
   }
 
   const imagesDir = path.join(dataDir(), "images");
