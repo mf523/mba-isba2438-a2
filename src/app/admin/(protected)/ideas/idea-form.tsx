@@ -58,6 +58,13 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
   const [assistantConfigured, setAssistantConfigured] = useState<boolean | null>(null);
   const [artworkPending, setArtworkPending] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
+  const choicesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (choices.length > 0 && !choicesPending) {
+      choicesRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [choices, choicesPending]);
 
   useEffect(() => {
     let cancelled = false;
@@ -243,9 +250,10 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
         <FormFeedback status={status} message={message} />
       ) : null}
 
-      {editing ? null : (
       <section className="briefs-privacy" aria-label="AI choice assistant">
-        <h3 style={{ marginTop: 0 }}>The problem is choice.</h3>
+        <h3 style={{ marginTop: 0 }}>
+          {editing ? "Push it further — the problem is choice." : "The problem is choice."}
+        </h3>
         <p>
           Type a seed — a few words or sentences. The assistant returns three
           distinct directions; you pick one and it becomes the idea.
@@ -307,7 +315,7 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
           </p>
         ) : null}
         {choices.length > 0 ? (
-          <div className="choices-grid" role="listbox" aria-label="Narrative choices">
+          <div className="choices-grid" role="listbox" aria-label="Narrative choices" ref={choicesRef}>
             {choices.map((choice, index) => (
               <button
                 type="button"
@@ -333,7 +341,6 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
           </p>
         ) : null}
       </section>
-      )}
 
       {editing && editing.body.trim().length > 0 ? (
         <p>

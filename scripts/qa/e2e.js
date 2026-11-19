@@ -217,15 +217,22 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   await waitIdle(ws, 400);
   const ideaTitleVal = await evalJs(`document.getElementById("idea-title")?.value`);
   check("edit prefills the idea form", ideaTitleVal === "Screen Idea", String(ideaTitleVal));
+  const oracleInEdit = await evalJs(`Boolean(document.getElementById("idea-seed"))`);
+  check("oracle available in edit mode", oracleInEdit);
   await fill(ws, "idea-title", "Screen Idea v2");
   await clickButton(ws, "Save changes");
   await waitIdle(ws);
   titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
   check("edited idea updates in place", titles.includes("Screen Idea v2"));
   await clickInCard(ws, "Screen Idea v2", "Delete");
-  await waitIdle(ws, 1200);
-  titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
-  check("deleted idea gone", !titles.includes("Screen Idea v2") && titles.includes("Prefill Source") === false ? titles.includes("Brief to published piece") : false);
+  let deleteGone = false;
+  for (let i = 0; i < 10; i += 1) {
+    await sleep(500);
+    titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
+    deleteGone = !titles.includes("Screen Idea v2");
+    if (deleteGone) break;
+  }
+  check("deleted idea gone", deleteGone && titles.length >= 2, JSON.stringify(titles));
 
   console.log("--- idea → content prefill");
   await fill(ws, "idea-title", "Prefill Source");

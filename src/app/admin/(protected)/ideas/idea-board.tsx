@@ -25,12 +25,14 @@ export default function IdeaBoard() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [filter, setFilter] = useState<Filter>("all");
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
+  const [boardError, setBoardError] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor>({ mode: "closed" });
   const [artworkBusyIds, setArtworkBusyIds] = useState<string[]>([]);
 
   async function handleGenerateArtwork(idea: Idea) {
     setArtworkBusyIds((current) => [...current, idea.id]);
     setSavedNotice(null);
+    setBoardError(null);
     try {
       const response = await fetch("/api/assistant/image", {
         method: "POST",
@@ -74,13 +76,13 @@ export default function IdeaBoard() {
         }
       } else {
         setSavedNotice(null);
-        window.alert(
+        setBoardError(
           result.message ?? "The picture could not be generated. Please try again.",
         );
       }
     } catch {
       setSavedNotice(null);
-      window.alert("Could not reach the server. Please try again.");
+      setBoardError("Could not reach the server. Please try again.");
     } finally {
       setArtworkBusyIds((current) => current.filter((id) => id !== idea.id));
     }
@@ -135,13 +137,14 @@ export default function IdeaBoard() {
   }
 
   async function handleDelete(idea: Idea) {
+    setBoardError(null);
     try {
       const response = await fetch(`/api/ideas/${idea.id}`, {
         method: "DELETE",
       });
       if (!response.ok) {
         setSavedNotice(null);
-        window.alert("The idea could not be deleted. Please try again after reloading.");
+        setBoardError("The idea could not be deleted. Please try again after reloading.");
         return;
       }
       setSavedNotice(`Idea "${idea.title}" deleted.`);
@@ -158,7 +161,7 @@ export default function IdeaBoard() {
       }
     } catch {
       setSavedNotice(null);
-      window.alert("Could not reach the server. Please try again.");
+      setBoardError("Could not reach the server. Please try again.");
     }
   }
 
@@ -178,6 +181,11 @@ export default function IdeaBoard() {
       {savedNotice ? (
         <p className="form-feedback form-feedback-success" role="status" aria-live="polite">
           {savedNotice}
+        </p>
+      ) : null}
+      {boardError ? (
+        <p className="form-feedback form-feedback-error" role="alert">
+          {boardError}
         </p>
       ) : null}
 
