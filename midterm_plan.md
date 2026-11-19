@@ -175,6 +175,10 @@ Deliberately skipped (indirection, not duplication — reported per the requirem
 
 Verification: `npm run check` + full unit suite + the stage 3.2 e2e script rerun unchanged (same PASS list proves nothing behaves differently), plus a spot-check that public and admin pages render identical markup (compare pre/post HTML of `/` and `/admin/projects`).
 
+## Feature — "The Problem is Choice" (BUILT, choice_plan.md)
+
+Choice-driven ideation on the ideas board, replacing the single-draft assistant: seed → three distinct AI narrative choices (Ollama via the configured model) → pick → fills the editable idea form → generated artwork (keyless Pollinations; prompt-only fallback) persisted on the idea (`imagePrompt`/`imageUrl`, file in `data/images/`, admin-gated `GET /api/images/[ideaId]`). New routes `POST /api/assistant/choices` + `POST /api/assistant/image`; `requestSuggestion` + `POST /api/assistant` retired; brief handoff pre-fills the seed. E2e suite extended to 58 checks including the live oracle + artwork flow; walkthrough script rewritten (`demo_script.md`, target 9:30).
+
 ## Sequencing
 
 Stages run 1 → 2a → 2b → 3.1 → 3.2 → 4 → 5, each a full build → review → revisions cycle, all checks green before moving on. Everything must be demonstrable in a ≤10-minute video: LocalStorage persistence across refresh, API invocations with server logs (one line per request via the shared module), HTTP 201 on creation, and the custom-feature component receiving data via props.

@@ -639,6 +639,69 @@ a {
   padding: 16px;
 }
 
+.choices-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+@media (min-width: 720px) {
+  .choices-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.choice-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--foreground);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-l);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.choice-card:hover {
+  border-color: var(--accent);
+}
+
+.choice-card-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0, 121, 191, 0.3);
+}
+
+.choice-card .tag {
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.choice-card p {
+  font-size: 14px;
+  line-height: 21px;
+  margin-bottom: 10px;
+}
+
+.choice-card-cta {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.idea-artwork {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius-m);
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+}
+
 .briefs-count {
   color: var(--muted);
 }

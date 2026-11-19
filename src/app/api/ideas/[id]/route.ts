@@ -1,3 +1,5 @@
+import { rm } from "node:fs/promises";
+import path from "node:path";
 import { NextResponse } from "next/server";
 import { isIdeaTargetType } from "@/data/ideas";
 import {
@@ -7,6 +9,7 @@ import {
   validateIdeaInput,
 } from "@/lib/ideas";
 import { logApiCall, parseJsonBody, requireAdmin, withRoute } from "@/lib/api";
+import { dataDir } from "@/lib/json-store";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -98,6 +101,15 @@ export const DELETE = withRoute(
         { ok: false, message: "Idea not found." },
         { status: 404 },
       );
+    }
+    for (const extension of ["png", "jpg", "jpeg", "webp"]) {
+      try {
+        await rm(path.join(dataDir(), "images", `idea-${id}.${extension}`), {
+          force: true,
+        });
+      } catch {
+        // best-effort cleanup of the artwork file
+      }
     }
     logApiCall(request, 200);
     return NextResponse.json({ ok: true, id });

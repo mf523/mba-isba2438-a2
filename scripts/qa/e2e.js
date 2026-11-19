@@ -238,6 +238,8 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   await goto(ws, `http://localhost:3100${ideaId}`);
   await waitIdle(ws, 1100);
   const blogTitle = await evalJs(`document.getElementById("blog-title")?.value`);
+  check("blog create form prefilled from idea", blogTitle === "Prefill Source", String(blogTitle));
+
   const blogSummary = await evalJs(`document.getElementById("blog-summary")?.value`);
   const blogContent = await evalJs(`document.getElementById("blog-content")?.value`);
   const prefillNote = await evalJs(`[...document.querySelectorAll(".form-feedback-success")].map((e) => e.textContent).join(" ")`);
@@ -247,6 +249,49 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   const projTitle = await evalJs(`document.getElementById("project-title")?.value`);
   const projDesc = await evalJs(`document.getElementById("project-description")?.value`);
   check("project create form prefilled from idea", projTitle === "Prefill Source" && projDesc === "Prefill body line one.", JSON.stringify({ projTitle, projDesc }).slice(0, 90));
+
+  console.log("--- choice oracle (AI: ollama + pollinations)");
+  const choicesResp = await evalJs(`(async () => { const r = await fetch("/api/assistant/choices", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ seed: "database migrations explained through bad relationships", targetType: "blog-post" }) }); return { status: r.status, json: await r.json() }; })()`);
+  check("POST /api/assistant/choices → 200 with 3 choices", choicesResp.status === 200 && choicesResp.json.ok && choicesResp.json.choices.length === 3, JSON.stringify(choicesResp.json.choices?.map((c) => c.angle)));
+  const unauthChoices = await evalJs(`(async () => { const r = await fetch("/api/assistant/choices", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", credentials: "omit" }); return r.status; })()`);
+  check("choices without admin → 401", unauthChoices === 401);
+  await goto(ws, "http://localhost:3100/admin/ideas");
+  await waitIdle(ws, 900);
+  await fill(ws, "idea-seed", "database migrations explained through bad relationships", "HTMLTextAreaElement");
+  await clickButton(ws, "Show me the choices");
+  let choiceCards = 0;
+  for (let i = 0; i < 50; i += 1) {
+    await sleep(3000);
+    choiceCards = await evalJs(`document.querySelectorAll(".choice-card").length`);
+    if (choiceCards > 0) break;
+  }
+  check("oracle shows 3 choice cards", choiceCards === 3, String(choiceCards));
+  await evalJs(`document.querySelector(".choice-card")?.click()`);
+  await waitIdle(ws, 400);
+  const filledSummary = await evalJs(`document.getElementById("idea-summary")?.value`);
+  const filledBody = await evalJs(`document.getElementById("idea-body")?.value`);
+  check("selecting a choice fills summary + body", Boolean(filledSummary) && Boolean(filledBody) && filledBody.length > 20, String(filledSummary?.slice(0, 60)));
+  await fill(ws, "idea-title", "Oracle Choice");
+  await clickButton(ws, "Save idea");
+  await waitIdle(ws, 1500);
+  titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
+  check("oracle idea saved to board", titles.includes("Oracle Choice"));
+  const oracleCard = `[...document.querySelectorAll(".brief-card")].find((c) => c.querySelector("h3")?.textContent === "Oracle Choice")`;
+  await evalJs(`${oracleCard}?.querySelector(".brief-card-actions button")?.click()`);
+  let artworkShown = false;
+  for (let i = 0; i < 40; i += 1) {
+    await sleep(3000);
+    artworkShown = await evalJs(`Boolean(${oracleCard}?.querySelector("img.idea-artwork"))`);
+    if (artworkShown) break;
+  }
+  check("generated picture appears on the idea card", artworkShown);
+  const oracleId = await evalJs(`${oracleCard}?.querySelector("a[href*='from-idea']")?.getAttribute("href")?.split("=")[1]`);
+  const imageStatus = await evalJs(`(async () => { const r = await fetch("/api/images/${oracleId}", { headers: { "cache-control": "no-store" } }); return { s: r.status, t: r.headers.get("content-type") }; })()`);
+  check("GET /api/images/[ideaId] → 200 image", imageStatus.s === 200 && String(imageStatus.t).startsWith("image/"), JSON.stringify(imageStatus));
+  await clickInCard(ws, "Oracle Choice", "Delete");
+  await waitIdle(ws, 1200);
+  titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
+  check("oracle idea deleted", !titles.includes("Oracle Choice"));
 
   console.log("--- nav");
   await goto(ws, "http://localhost:3100/admin/briefs");

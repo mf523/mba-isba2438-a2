@@ -8,6 +8,8 @@ export interface Idea {
   body: string;
   targetType: IdeaTargetType;
   origin: IdeaOrigin;
+  imagePrompt?: string;
+  imageUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

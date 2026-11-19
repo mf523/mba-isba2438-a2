@@ -26,6 +26,47 @@ export default function IdeaBoard() {
   const [filter, setFilter] = useState<Filter>("all");
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor>({ mode: "closed" });
+  const [artworkBusyIds, setArtworkBusyIds] = useState<string[]>([]);
+
+  async function handleGenerateArtwork(idea: Idea) {
+    setArtworkBusyIds((current) => [...current, idea.id]);
+    setSavedNotice(null);
+    try {
+      const response = await fetch("/api/assistant/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ideaId: idea.id }),
+      });
+      const result = await response.json();
+      if (response.ok && result.ok && result.idea) {
+        const updated: Idea = result.idea;
+        setSavedNotice(`Picture generated for "${idea.title}".`);
+        if (state.status === "ready") {
+          setState({
+            status: "ready",
+            ideas: state.ideas.map((candidate) =>
+              candidate.id === updated.id ? updated : candidate,
+            ),
+          });
+        } else {
+          load();
+        }
+        if (editor.mode === "edit" && editor.idea.id === updated.id) {
+          setEditor({ mode: "edit", idea: updated });
+        }
+      } else {
+        setSavedNotice(null);
+        window.alert(
+          result.message ?? "The picture could not be generated. Please try again.",
+        );
+      }
+    } catch {
+      setSavedNotice(null);
+      window.alert("Could not reach the server. Please try again.");
+    } finally {
+      setArtworkBusyIds((current) => current.filter((id) => id !== idea.id));
+    }
+  }
 
   function load() {
     fetch("/api/ideas", { headers: { "cache-control": "no-store" } })
@@ -150,8 +191,8 @@ export default function IdeaBoard() {
         {state.status === "ready" ? (
           state.ideas.length === 0 ? (
             <p className="briefs-empty">
-              No ideas yet. Add one by hand, or let the assistant draft one from
-              your notes.
+              No ideas yet. Add one by hand, type a seed and pick one of three
+              choices, or start from a brief.
             </p>
           ) : (
             <>
@@ -185,6 +226,8 @@ export default function IdeaBoard() {
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                       onDelete={() => handleDelete(idea)}
+                      onGenerateArtwork={() => handleGenerateArtwork(idea)}
+                      artworkBusy={artworkBusyIds.includes(idea.id)}
                     />
                   ))}
                 </ul>

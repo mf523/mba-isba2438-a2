@@ -9,6 +9,7 @@ import {
   getIdeaById,
   listIdeas,
   updateIdea,
+  updateIdeaImage,
   validateIdeaInput,
 } from "./ideas";
 
@@ -126,5 +127,25 @@ describe("ideas store", () => {
     assert.equal(await deleteIdea(created.id), true);
     assert.equal(await getIdeaById(created.id), undefined);
     assert.equal(await deleteIdea(created.id), false);
+  });
+
+  it("persists artwork fields and returns undefined for unknown ids", async () => {
+    const created = await addIdea({
+      title: "With art",
+      summary: "Has artwork.",
+      body: "The narrative body.",
+      targetType: "blog-post",
+      origin: "assistant",
+    });
+    const updated = await updateIdeaImage(created.id, {
+      imagePrompt: "Editorial illustration for a developer blog post. Subject: The narrative body.",
+      imageUrl: `/api/images/${created.id}`,
+    });
+    assert.equal(updated?.imagePrompt?.includes("The narrative body"), true);
+    assert.equal(updated?.imageUrl, `/api/images/${created.id}`);
+    assert.equal(await updateIdeaImage("no-such-id", { imagePrompt: "p", imageUrl: "u" }), undefined);
+
+    const reread = await getIdeaById(created.id);
+    assert.equal(reread?.imageUrl, `/api/images/${created.id}`);
   });
 });

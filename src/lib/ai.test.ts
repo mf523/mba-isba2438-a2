@@ -1,97 +1,67 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  buildAssistantPrompt,
-  extractSuggestionFromReply,
-  requestSuggestion,
-  requestSuggestionFromOllama,
-  validateAssistantRequest,
+  buildChoicesPrompt,
+  buildImagePrompt,
+  extractChoicesFromReply,
+  requestChoices,
+  requestChoicesFromOllama,
+  requestNarrativeImage,
+  validateChoicesRequest,
 } from "./ai";
 
-describe("validateAssistantRequest", () => {
-  it("accepts notes with no image", () => {
+describe("validateChoicesRequest", () => {
+  it("accepts a seed with a valid target type", () => {
     assert.deepEqual(
-      validateAssistantRequest({ targetType: "blog-post", notes: "hello", image: null }),
+      validateChoicesRequest({ seed: "caching strategies", targetType: "blog-post" }),
       { ok: true },
     );
   });
 
-  it("requires notes", () => {
-    const result = validateAssistantRequest({ targetType: "blog-post", notes: "  " });
+  it("requires a seed of at least a few characters", () => {
+    const result = validateChoicesRequest({ seed: "  ", targetType: "blog-post" });
     assert.equal(result.ok, false);
     assert.equal(result.ok === false && result.status, 400);
   });
 
-  it("rejects unsupported image types", () => {
-    const result = validateAssistantRequest({
-      targetType: "blog-post",
-      notes: "hello",
-      image: { mediaType: "image/svg+xml", sizeBytes: 100 },
-    });
+  it("rejects a seed over 2000 characters", () => {
+    const result = validateChoicesRequest({ seed: "x".repeat(2001), targetType: "blog-post" });
     assert.equal(result.ok, false);
-    assert.match(result.ok === false ? result.message : "", /PNG, JPEG, WebP or GIF/);
   });
 
-  it("rejects oversized images with 413", () => {
-    const result = validateAssistantRequest({
-      targetType: "blog-post",
-      notes: "hello",
-      image: { mediaType: "image/png", sizeBytes: 11 * 1024 * 1024 },
-    });
+  it("rejects an unknown target type", () => {
+    const result = validateChoicesRequest({ seed: "seed", targetType: "podcast" });
     assert.equal(result.ok, false);
-    assert.equal(result.ok === false && result.status, 413);
+    assert.equal(result.ok === false && result.status, 400);
   });
 });
 
-describe("buildAssistantPrompt", () => {
-  it("mentions the target type and notes", () => {
-    const prompt = buildAssistantPrompt({
+describe("buildChoicesPrompt", () => {
+  it("asks for exactly three distinct choices as JSON", () => {
+    const prompt = buildChoicesPrompt({
+      seed: "caching",
       targetType: "project",
-      notes: "A case study about caching.",
       brief: null,
-      image: null,
     });
+    assert.match(prompt, /exactly THREE distinct/);
     assert.match(prompt, /project entry/);
-    assert.match(prompt, /A case study about caching\./);
-    assert.match(prompt, /80 characters/);
+    assert.match(prompt, /caching/);
+    assert.match(prompt, /ONLY a JSON object/);
   });
 
   it("includes brief fields when provided", () => {
-    const prompt = buildAssistantPrompt({
+    const prompt = buildChoicesPrompt({
+      seed: "caching",
       targetType: "blog-post",
-      notes: "Notes.",
       brief: {
         title: "A brief",
         audience: "Graders",
         tone: "friendly",
         keyPoints: "Point one\nPoint two",
       },
-      image: null,
     });
     assert.match(prompt, /A brief/);
-    assert.match(prompt, /Graders/);
-    assert.match(prompt, /friendly/);
     assert.match(prompt, /Point two/);
-  });
-
-  it("mentions the attached image", () => {
-    const prompt = buildAssistantPrompt({
-      targetType: "blog-post",
-      notes: "Notes.",
-      brief: null,
-      image: { mediaType: "image/png", base64: "AAAA" },
-    });
-    assert.match(prompt, /image is attached/i);
-  });
-
-  it("asks for a JSON-only reply", () => {
-    const prompt = buildAssistantPrompt({
-      targetType: "blog-post",
-      notes: "Notes.",
-      brief: null,
-      image: null,
-    });
-    assert.match(prompt, /ONLY a JSON object/);
   });
 });
 
@@ -111,84 +81,74 @@ function stubClient(reply: {
   };
 }
 
-describe("requestSuggestion (anthropic provider)", () => {
-  const input = {
-    targetType: "blog-post",
-    notes: "Notes.",
-    brief: null,
-    image: null,
-  };
+const VALID_CHOICES = {
+  choices: [
+    { angle: "practical", paragraph: "A practical walkthrough." },
+    { angle: "contrarian", paragraph: "Cache invalidation is a myth." },
+    { angle: "personal", paragraph: "I once lost a weekend to a stale cache." },
+  ],
+};
 
-  it("returns a ready suggestion for a valid reply", async () => {
-    const outcome = await requestSuggestion(input, { client: stubClient({
+describe("extractChoicesFromReply", () => {
+  it("returns three parsed choices", () => {
+    const outcome = extractChoicesFromReply({
       stopReason: "end_turn",
-      parsedOutput: { title: "T", summary: "S", body: "B" },
-    }) });
-    assert.deepEqual(outcome, {
-      status: "ready",
-      suggestion: { title: "T", summary: "S", body: "B" },
+      parsedOutput: VALID_CHOICES,
+    });
+    assert.equal(outcome.status, "ready");
+    assert.equal(outcome.status === "ready" && outcome.choices.length, 3);
+  });
+
+  it("accepts a bare array reply", () => {
+    const outcome = extractChoicesFromReply({
+      stopReason: "end_turn",
+      parsedOutput: VALID_CHOICES.choices,
+    });
+    assert.equal(outcome.status, "ready");
+  });
+
+  it("keeps the usable choices when some are malformed", () => {
+    const outcome = extractChoicesFromReply({
+      stopReason: "end_turn",
+      parsedOutput: {
+        choices: [VALID_CHOICES.choices[0], { angle: 1 }, { paragraph: "" }],
+      },
+    });
+    assert.equal(outcome.status, "ready");
+    assert.equal(outcome.status === "ready" && outcome.choices.length, 1);
+  });
+
+  it("trims and normalizes the fields", () => {
+    const outcome = extractChoicesFromReply({
+      stopReason: "end_turn",
+      parsedOutput: {
+        choices: [{ angle: "  Practical  ", paragraph: "  Text.  " }],
+      },
+    });
+    assert.deepEqual(outcome.status === "ready" && outcome.choices[0], {
+      angle: "practical",
+      paragraph: "Text.",
     });
   });
 
-  it("reports a refusal from the model", async () => {
-    const outcome = await requestSuggestion(input, { client: stubClient({
-      stopReason: "refusal",
-      parsedOutput: null,
-    }) });
+  it("reports a refusal", () => {
+    const outcome = extractChoicesFromReply({ stopReason: "refusal", parsedOutput: null });
     assert.equal(outcome.status, "refusal");
-    assert.match(outcome.status === "refusal" ? outcome.message : "", /declined/i);
   });
 
-  it("reports a token-limit cut-off", async () => {
-    const outcome = await requestSuggestion(input, { client: stubClient({
-      stopReason: "max_tokens",
-      parsedOutput: null,
-    }) });
+  it("reports a token-limit cut-off", () => {
+    const outcome = extractChoicesFromReply({ stopReason: "max_tokens", parsedOutput: null });
     assert.equal(outcome.status, "error");
     assert.match(outcome.status === "error" ? outcome.message : "", /cut off/i);
   });
 
-  it("reports a malformed reply (missing fields)", async () => {
-    const outcome = await requestSuggestion(input, { client: stubClient({
+  it("reports an empty parse as an error", () => {
+    const outcome = extractChoicesFromReply({
       stopReason: "end_turn",
-      parsedOutput: { title: "Only a title" },
-    }) });
+      parsedOutput: { choices: [{ angle: 5 }] },
+    });
     assert.equal(outcome.status, "error");
     assert.match(outcome.status === "error" ? outcome.message : "", /not in the expected format/i);
-  });
-
-  it("reports a reply that breaks the length limits", async () => {
-    const outcome = await requestSuggestion(input, { client: stubClient({
-      stopReason: "end_turn",
-      parsedOutput: { title: "x".repeat(81), summary: "S", body: "B" },
-    }) });
-    assert.equal(outcome.status, "error");
-    assert.match(outcome.status === "error" ? outcome.message : "", /length limits/i);
-  });
-
-  it("reports network errors without throwing", async () => {
-    const outcome = await requestSuggestion(input, { client: stubClient(null, true) });
-    assert.equal(outcome.status, "error");
-    assert.match(outcome.status === "error" ? outcome.message : "", /Could not reach/i);
-  });
-
-  it("reports an unconfigured assistant without calling the model", async () => {
-    const outcome = await requestSuggestion(input, { client: null });
-    assert.equal(outcome.status, "error");
-    assert.match(outcome.status === "error" ? outcome.message : "", /not configured/i);
-  });
-});
-
-describe("extractSuggestionFromReply", () => {
-  it("trims the suggestion fields", () => {
-    const outcome = extractSuggestionFromReply({
-      stopReason: "end_turn",
-      parsedOutput: { title: "  T  ", summary: " S ", body: " B " },
-    });
-    assert.deepEqual(outcome, {
-      status: "ready",
-      suggestion: { title: "T", summary: "S", body: "B" },
-    });
   });
 });
 
@@ -197,11 +157,10 @@ interface CapturedRequest {
   headers: Record<string, string>;
   body: {
     model: string;
-    messages: { role: string; content: string; images?: string[] }[];
+    messages: { role: string; content: string }[];
     format: { required?: string[]; additionalProperties?: boolean };
     stream: boolean;
     think: boolean;
-    options: { num_predict: number };
   };
 }
 
@@ -224,122 +183,58 @@ function ollamaReply(content: string) {
   });
 }
 
-const VALID_SUGGESTION = { title: "T", summary: "S", body: "B" };
-
-describe("requestSuggestionFromOllama", () => {
-  const input = {
-    targetType: "blog-post",
-    notes: "Notes.",
-    brief: null,
-    image: null,
-  };
+describe("requestChoicesFromOllama", () => {
+  const input = { seed: "caching", targetType: "blog-post", brief: null };
 
   it("posts the schema, model and prompt to the chat endpoint", async () => {
-    const { fetchImpl, captured } = stubOllamaFetch(() => ollamaReply(JSON.stringify(VALID_SUGGESTION)));
-    const outcome = await requestSuggestionFromOllama(input, fetchImpl);
-    assert.deepEqual(outcome, { status: "ready", suggestion: VALID_SUGGESTION });
+    const { fetchImpl, captured } = stubOllamaFetch(() => ollamaReply(JSON.stringify(VALID_CHOICES)));
+    const outcome = await requestChoicesFromOllama(input, fetchImpl);
+    assert.equal(outcome.status, "ready");
     assert.match(captured.url, /\/api\/chat$/);
     assert.equal(captured.body.model, "deepseek-v4.1-flash:cloud");
     assert.equal(captured.body.stream, false);
     assert.equal(captured.body.think, false);
-    assert.equal(captured.body.options.num_predict > 0, true);
-    assert.deepEqual(captured.body.format.required, ["title", "summary", "body"]);
-    assert.equal(captured.body.format.additionalProperties, false);
-    assert.equal(captured.body.messages[0].content.includes("Notes."), true);
-    assert.equal(captured.body.messages[0].images, undefined);
-  });
-
-  it("attaches the image as base64 when provided", async () => {
-    const { fetchImpl, captured } = stubOllamaFetch(() => ollamaReply(JSON.stringify(VALID_SUGGESTION)));
-    await requestSuggestionFromOllama(
-      { ...input, image: { mediaType: "image/png", base64: "AAAA" } },
-      fetchImpl,
-    );
-    assert.deepEqual(captured.body.messages[0].images, ["AAAA"]);
-  });
-
-  it("reports a malformed reply", async () => {
-    const { fetchImpl } = stubOllamaFetch(() => ollamaReply("this is not json"));
-    const outcome = await requestSuggestionFromOllama(input, fetchImpl);
-    assert.equal(outcome.status, "error");
-    assert.match(outcome.status === "error" ? outcome.message : "", /not in the expected format/i);
+    assert.deepEqual(captured.body.format.required, ["choices"]);
+    assert.equal(captured.body.messages[0].content.includes("caching"), true);
   });
 
   it("accepts a reply wrapped in markdown fences", async () => {
     const { fetchImpl } = stubOllamaFetch(() =>
-      ollamaReply("```json\n" + JSON.stringify(VALID_SUGGESTION) + "\n```"));
-    const outcome = await requestSuggestionFromOllama(input, fetchImpl);
-    assert.deepEqual(outcome, { status: "ready", suggestion: VALID_SUGGESTION });
-  });
-
-  it("reports an unparseable response envelope", async () => {
-    const { fetchImpl } = stubOllamaFetch(() => new Response("<html>gateway error</html>", { status: 200 }));
-    const outcome = await requestSuggestionFromOllama(input, fetchImpl);
-    assert.equal(outcome.status, "error");
-    assert.match(outcome.status === "error" ? outcome.message : "", /not in the expected format/i);
+      ollamaReply("```json\n" + JSON.stringify(VALID_CHOICES) + "\n```"));
+    const outcome = await requestChoicesFromOllama(input, fetchImpl);
+    assert.equal(outcome.status, "ready");
   });
 
   it("reports a missing model with a pull hint", async () => {
-    const { fetchImpl } = stubOllamaFetch(() =>
-      new Response("model not found", { status: 404 }));
-    const outcome = await requestSuggestionFromOllama(input, fetchImpl);
+    const { fetchImpl } = stubOllamaFetch(() => new Response("model not found", { status: 404 }));
+    const outcome = await requestChoicesFromOllama(input, fetchImpl);
     assert.equal(outcome.status, "error");
     assert.match(outcome.status === "error" ? outcome.message : "", /ollama pull deepseek-v4\.1-flash:cloud/i);
-  });
-
-  it("reports daemon errors with the status code", async () => {
-    const { fetchImpl } = stubOllamaFetch(() => new Response("server busy", { status: 500 }));
-    const outcome = await requestSuggestionFromOllama(input, fetchImpl);
-    assert.equal(outcome.status, "error");
-    assert.match(outcome.status === "error" ? outcome.message : "", /500/);
   });
 
   it("reports an unreachable daemon without throwing", async () => {
     const failing: typeof fetch = async () => {
       throw new Error("connection refused");
     };
-    const outcome = await requestSuggestionFromOllama(input, failing);
+    const outcome = await requestChoicesFromOllama(input, failing);
     assert.equal(outcome.status, "error");
     assert.match(outcome.status === "error" ? outcome.message : "", /Could not reach Ollama/i);
   });
-
-  it("uses OLLAMA_BASE_URL and sends the bearer key when set", async () => {
-    const previousBase = process.env.OLLAMA_BASE_URL;
-    const previousKey = process.env.OLLAMA_API_KEY;
-    process.env.OLLAMA_BASE_URL = "http://127.0.0.1:40001";
-    process.env.OLLAMA_API_KEY = "test-key";
-    try {
-      const { fetchImpl, captured } = stubOllamaFetch(() => ollamaReply(JSON.stringify(VALID_SUGGESTION)));
-      await requestSuggestionFromOllama(input, fetchImpl);
-      assert.equal(captured.url, "http://127.0.0.1:40001/api/chat");
-      assert.equal(captured.headers.authorization, "Bearer test-key");
-    } finally {
-      if (previousBase === undefined) delete process.env.OLLAMA_BASE_URL;
-      else process.env.OLLAMA_BASE_URL = previousBase;
-      if (previousKey === undefined) delete process.env.OLLAMA_API_KEY;
-      else process.env.OLLAMA_API_KEY = previousKey;
-    }
-  });
 });
 
-describe("requestSuggestion provider routing", () => {
-  const input = {
-    targetType: "blog-post",
-    notes: "Notes.",
-    brief: null,
-    image: null,
-  };
+describe("requestChoices provider routing", () => {
+  const input = { seed: "caching", targetType: "blog-post", brief: null };
 
   it("routes to ollama when AI_PROVIDER=ollama, even with a client stub", async () => {
     const previous = process.env.AI_PROVIDER;
     process.env.AI_PROVIDER = "ollama";
     try {
-      const { fetchImpl, captured } = stubOllamaFetch(() => ollamaReply(JSON.stringify(VALID_SUGGESTION)));
-      const outcome = await requestSuggestion(input, {
-        client: stubClient({ stopReason: "end_turn", parsedOutput: VALID_SUGGESTION }),
+      const { fetchImpl, captured } = stubOllamaFetch(() => ollamaReply(JSON.stringify(VALID_CHOICES)));
+      const outcome = await requestChoices(input, {
+        client: stubClient({ stopReason: "end_turn", parsedOutput: VALID_CHOICES }),
         fetchImpl,
       });
-      assert.deepEqual(outcome, { status: "ready", suggestion: VALID_SUGGESTION });
+      assert.equal(outcome.status, "ready");
       assert.match(captured.url, /\/api\/chat$/);
     } finally {
       if (previous === undefined) delete process.env.AI_PROVIDER;
@@ -351,12 +246,98 @@ describe("requestSuggestion provider routing", () => {
     const previous = process.env.AI_PROVIDER;
     delete process.env.AI_PROVIDER;
     try {
-      const outcome = await requestSuggestion(input, { client: null });
+      const outcome = await requestChoices(input, { client: null });
       assert.equal(outcome.status, "error");
       assert.match(outcome.status === "error" ? outcome.message : "", /ANTHROPIC_API_KEY/);
     } finally {
       if (previous === undefined) delete process.env.AI_PROVIDER;
       else process.env.AI_PROVIDER = previous;
     }
+  });
+
+  it("returns three choices from the anthropic path", async () => {
+    const previous = process.env.AI_PROVIDER;
+    delete process.env.AI_PROVIDER;
+    try {
+      const outcome = await requestChoices(input, {
+        client: stubClient({ stopReason: "end_turn", parsedOutput: VALID_CHOICES }),
+      });
+      assert.equal(outcome.status, "ready");
+      assert.equal(outcome.status === "ready" && outcome.choices.length, 3);
+    } finally {
+      if (previous === undefined) delete process.env.AI_PROVIDER;
+      else process.env.AI_PROVIDER = previous;
+    }
+  });
+});
+
+describe("buildImagePrompt", () => {
+  it("condenses whitespace and caps the subject length", () => {
+    const prompt = buildImagePrompt("  a   very  long\nnarrative about caches  ");
+    assert.match(prompt, /^Editorial illustration/);
+    assert.equal(prompt.includes("a very long narrative about caches"), true);
+  });
+});
+
+describe("requestNarrativeImage", () => {
+  it("fetches from the pollinations prompt endpoint with a seed", async () => {
+    let calledUrl = "";
+    const fetchImpl: typeof fetch = async (url) => {
+      calledUrl = String(url);
+      return new Response(new Uint8Array([1, 2, 3]), {
+        headers: { "content-type": "image/png" },
+      });
+    };
+    const outcome = await requestNarrativeImage("a narrative about caches", fetchImpl);
+    assert.equal(outcome.status, "ready");
+    assert.match(calledUrl, /image\.pollinations\.ai\/prompt\//);
+    assert.match(calledUrl, /width=1024/);
+    assert.match(calledUrl, /seed=\d+/);
+    assert.ok(outcome.status === "ready");
+    assert.equal(outcome.extension, "png");
+    assert.match(outcome.imagePrompt, /a narrative about caches/);
+  });
+
+  it("honors IMAGE_PROVIDER_URL", async () => {
+    const previous = process.env.IMAGE_PROVIDER_URL;
+    process.env.IMAGE_PROVIDER_URL = "http://127.0.0.1:40010/images";
+    try {
+      const fetchImpl: typeof fetch = async (url) => {
+        assert.equal(String(url).startsWith("http://127.0.0.1:40010/images/prompt/"), true);
+        return new Response(new Uint8Array([1]), { headers: { "content-type": "image/jpeg" } });
+      };
+      const outcome = await requestNarrativeImage("narrative", fetchImpl);
+      assert.equal(outcome.status === "ready" && outcome.extension, "jpg");
+    } finally {
+      if (previous === undefined) delete process.env.IMAGE_PROVIDER_URL;
+      else process.env.IMAGE_PROVIDER_URL = previous;
+    }
+  });
+
+  it("reports transport errors without throwing", async () => {
+    const failing: typeof fetch = async () => {
+      throw new Error("offline");
+    };
+    const outcome = await requestNarrativeImage("narrative", failing);
+    assert.equal(outcome.status, "error");
+    assert.match(outcome.status === "error" ? outcome.message : "", /image service/i);
+  });
+
+  it("rejects non-image content types", async () => {
+    const fetchImpl: typeof fetch = async () =>
+      new Response("<html>not an image</html>", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      });
+    const outcome = await requestNarrativeImage("narrative", fetchImpl);
+    assert.equal(outcome.status, "error");
+    assert.match(outcome.status === "error" ? outcome.message : "", /unsupported file type/i);
+  });
+
+  it("reports http errors from the image service", async () => {
+    const fetchImpl: typeof fetch = async () => new Response("nope", { status: 503 });
+    const outcome = await requestNarrativeImage("narrative", fetchImpl);
+    assert.equal(outcome.status, "error");
+    assert.match(outcome.status === "error" ? outcome.message : "", /503/);
   });
 });

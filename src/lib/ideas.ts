@@ -34,6 +34,8 @@ function isIdea(value: unknown): value is Idea {
     typeof entry.body === "string" &&
     isIdeaTargetType(entry.targetType) &&
     isIdeaOrigin(entry.origin) &&
+    (entry.imagePrompt === undefined || typeof entry.imagePrompt === "string") &&
+    (entry.imageUrl === undefined || typeof entry.imageUrl === "string") &&
     typeof entry.createdAt === "string" &&
     typeof entry.updatedAt === "string"
   );
@@ -85,6 +87,28 @@ export function updateIdea(
       summary: input.summary.trim(),
       body: input.body.trim(),
       targetType: input.targetType,
+      updatedAt: new Date().toISOString(),
+    };
+    return {
+      data: current.map((idea) => (idea.id === id ? updated : idea)),
+      value: updated,
+    };
+  });
+}
+
+export function updateIdeaImage(
+  id: string,
+  fields: { imagePrompt: string; imageUrl: string },
+): Promise<Idea | undefined> {
+  return store.update((current) => {
+    const existing = current.find((idea) => idea.id === id);
+    if (!existing) {
+      return { data: current, value: undefined };
+    }
+    const updated: Idea = {
+      ...existing,
+      imagePrompt: fields.imagePrompt,
+      imageUrl: fields.imageUrl,
       updatedAt: new Date().toISOString(),
     };
     return {

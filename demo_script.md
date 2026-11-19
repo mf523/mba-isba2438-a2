@@ -1,121 +1,135 @@
-# Portfolio and Contact Form — Video Submission Script
+# Midterm Walkthrough — Video Submission Script
 
-Estimated duration: 6–7 minutes, including navigation, typing, and pauses for results. Timing is a rehearsal estimate.
+Estimated duration: **9:00–9:30**, against the 10:00 hard cutoff (recording stops automatically).
+Read the blockquotes as narration, adapting the wording to your speaking style. *Italic text* is screen-recording direction, not spoken. Rubric IDs in the right column show what each segment earns.
 
-Read the blockquotes as narration, adapting the wording to your speaking style. Italic text gives screen-recording directions and is not spoken. Describe each result after it appears on screen.
+## Before recording (setup checklist)
 
-Before recording, run the app with `npm run dev` and use the local URL printed in the terminal. Keep the browser address bar visible, confirm that Resume Site and Task Tracker are listed, and have the linked source files ready. Sign in to the admin area beforehand if using the final saved-message demonstration.
+- [ ] `npm run build && npm start` running on **:3100**, terminal **visible** (server logs must be readable on camera).
+- [ ] Browser: signed out of admin (clear the session cookie or incognito) for the login moment.
+- [ ] DevTools ready: **Network** tab (preserve log ON) and **Application → Local Storage** pane.
+- [ ] `data/contact-submissions.json` open in the editor (fresh view) for the persistence shot.
+- [ ] `src/lib/briefs-store.ts`, `src/lib/ai.ts`, `src/components/idea-card.tsx`, `src/lib/json-store.ts` open in editor tabs.
+- [ ] Ollama running with the configured model; internet available for the image service.
 
-| Approximate time | What to show | Rubric coverage |
+| Time | Segment | Rubric |
 | --- | --- | --- |
-| 0:00–1:30 | Home, About Me, My Projects, both project detail URLs, and Contact Me | A2-13: four pages and two dynamic values |
-| 1:30–2:45 | Empty submission, malformed email, and successful submission | A2-13: invalid and valid submissions |
-| 2:45–6:00 | Network request and the complete form-to-server-to-feedback path | A2-14: accurate explanation of the flow |
-| 6:00–6:30 | The saved message in Contact Requests or JSON storage | Supporting evidence that the valid submission was saved |
+| 0:00–0:45 | Portfolio tour (A2 pages intact) | MIDTERM-07 |
+| 0:45–2:15 | Briefs: LocalStorage save → refresh → retrieve; empty + corrupt handling | MIDTERM-01/02/03 |
+| 2:15–3:30 | The oracle: seed → three choices → pick → idea | MIDTERM-04/08 |
+| 3:30–4:15 | Picture generation on the idea card | MIDTERM-04 |
+| 4:15–6:00 | CRUD sweep across all four object types | MIDTERM-05 |
+| 6:00–7:00 | API deep-dive: 201 + server logs + JSON file | MIDTERM-06 |
+| 7:00–8:30 | Code explanation: fetch → props; LocalStorage both flows | MIDTERM-08/09/10 |
+| 8:30–9:15 | Design choice, storage limitation, testing decision | MIDTERM-11 |
+| 9:15–9:30 | Repo, license, close | MIDTERM-13 |
 
-*Start at `/`. Show the welcome text and Featured Projects.*
+---
 
-> This portfolio introduces my background, presents my projects, and lets visitors send a contact request. I’ll show the four main pages, open two different project records, and demonstrate what happens when the contact form receives invalid and valid information.
->
-> The Home page gives visitors an introduction and links to featured projects.
+### 0:00–0:45 — Portfolio tour
 
-*Click **About Me** in the navigation. Show `/about-me`, then scroll through the introduction, Skills, Education, and Experience.*
+*Start at `/`. Scroll through home (hero + featured grid), About Me, My Projects, one project detail, Blogs.*
 
-> About Me gives more detail about my background. It brings together my introduction, skills, education, and experience.
+> This is my portfolio from Assignment 2, extended into a content-creation studio. All the original pages still work — home, about, project details on dynamic slug routes, and the blog — and on top of them I've added two meaningful features: briefs stored in the browser, and an idea board backed by the server. Both get AI assistance.
 
-*Click **My Projects**. Show `/projects` and both project cards.*
+### 0:45–2:15 — Briefs (LocalStorage feature)
 
-> My Projects lists the available projects. Each card links to a detail page using that project’s slug, which is the identifying part of its URL.
+*Navigate to **Admin**, sign in with the admin password, open **Briefs**.*
 
-*Click **Resume Site**. Hold on `/projects/resume-site`, its title, description, and tech stack. Return through **My Projects**, then click **Task Tracker**. Hold on `/projects/task-tracker` and its different content.*
+> Briefs are my planning notes — what a piece of content is, who it's for, how it should sound. They're private working notes, so they live in browser LocalStorage, not on the server.
 
-> The first URL uses resume-site and displays the Resume Site record. The second uses task-tracker and displays the Task Tracker record.
->
-> Both use the same dynamic route, projects slash slug. The page reads the slug from the URL, looks up the matching project, and displays that record. Changing the slug changes the content while keeping the same page structure.
+*Fill the brief form: title "Migration story", type Blog post, audience, tone, two key points. Click save. Point at the new brief card. Press **F5**.*
 
-*Briefly visit `/projects/not-a-real-project` and show “Page not found.” This extra check supports the unknown-value requirement in A2-02. Then click **Contact Me** in the navigation.*
+> I save the brief — it's in LocalStorage under the key mba-isba2438-a2:briefs. Watch: I refresh the page — the brief is still here, restored from storage.
 
-> An unknown slug displays the not-found page because there is no matching project.
->
-> The fourth main page is Contact Me. It has labeled fields for name, email, and message, followed by the Send Message button.
+*Open DevTools → Application → Local Storage → show the JSON. Then set its value to `not json at all` and reload.*
 
-*On `/contact-me-server-form`, leave all three fields empty and click **Send Message**. Hold on the general error and “Name is required,” “Email is required,” and “Message is required.”*
+> And it degrades gracefully. If I corrupt the stored data — I'll just type garbage into the storage entry and reload — the board tells me the saved briefs couldn't be read and starts from an empty list instead of crashing. Empty storage is handled the same way: an empty board, not an error.
 
-> First, I’m submitting an empty form. The server rejects it and returns an error for each required field. The page shows those errors beside the inputs so the visitor knows what to fix.
+*Restore the storage value (or re-create the brief).*
 
-*Fill all fields again: Name = `Alex Demo`, Email = `alex-at-example.com`, Message = `A2 recording: project inquiry.` Click **Send Message**. Hold on “Enter a valid email address.”*
+### 2:15–3:30 — The oracle (custom backend feature: ideas)
 
-> This time the name and message are filled in, but the email is malformed. The server rejects this submission too and identifies the email field as the problem.
+*Open **Ideas**. Point at the "The problem is choice." panel.*
 
-*Enter all three values again, using `Alex Demo`, `alex@example.com`, and `A2 recording: project inquiry.` Open Developer Tools → Network, clear the request list, and keep the form visible. Click **Send Message**. Show the success confirmation immediately, before it fades. If the pending state is too brief to see, explain it later from the code.*
+> Ideation is hard because the problem is choice. So instead of one AI draft, the assistant is an oracle of options: I give it a seed and it returns three distinct narrative directions.
 
-> With a valid email and all required fields filled in, the submission succeeds. The confirmation appears and the fields reset. After five seconds, the confirmation begins fading out.
+*Type the seed: "database migrations explained through bad relationships". Click **Show me the choices**. While loading, narrate.*
 
-*Select the submission request in Network. Show its request URL and POST method, then locate the submitted name, email, and message in its payload. Keep this request available while explaining the code.*
+> This call goes to my API at /api/assistant/choices. The server sends the seed to the configured language model — here, a local Ollama model — asking for exactly three distinct angles, and returns them as JSON.
 
-> This request connects the form to the server. Next.js sends a POST request to the contact page’s URL and identifies the Server Action to run. In this implementation, submitContact is the server handler reached through that request.
+*Three cards appear. Hover each, then click one.*
 
-*Use this flowchart during the A2-14 explanation: “Explains the form-to-endpoint flow accurately in your own words.” Follow the arrows from the visitor’s inputs to the server and back to the feedback.*
+> Three different takes: practical, contrarian, personal. Choosing one fills the idea's summary and body — and it stays editable. The choice is the input; I'm still the author.
 
-```mermaid
-flowchart TD
-    A["Submit name, email, message<br/>contact-form.tsx<br/>action={formAction}"]
-    B["POST /contact-me-server-form<br/>Next.js dispatches to actions.ts<br/>submitContact()"]
-    C{"Input valid?<br/>contact-submissions.ts<br/>validateContactInput()"}
-    D["Save to JSON<br/>contact-submissions.ts<br/>saveContactSubmission()"]
-    E["Show errors<br/>contact-form.tsx<br/>state.message / state.fieldErrors"]
-    F["Show success and reset form<br/>contact-form.tsx<br/>showSuccess / formRef.current?.reset()"]
+*Edit the title, tweak a word in the body, click **Save idea**.*
 
-    A -->|formAction sends FormData| B --> C
-    C -->|No| E
-    C -->|Yes| D
-    D -->|Save fails| E
-    D -->|Saved| F
-```
+> I edit and save — the idea is now a normal record on the server, stored in data/ideas.json behind the ideas API.
 
-*The returned result reaches the form through `useActionState`, which updates the visible feedback.*
+### 3:30–4:15 — Picture generation
 
-*JSON storage defaults to `data/contact-submissions.json`; `PORTFOLIO_DATA_DIR` can change its directory. A successful submission saves a contact request for the administrator to review.*
+*On the new idea's card, click **Generate picture**. While it loads:*
 
-> When I submit the form, its named fields become the data sent to the contact page’s server endpoint. Next.js routes that request to submitContact, which checks the values and saves them only if they pass validation. The action returns a result that updates the form: errors explain what went wrong, while success shows a confirmation and clears the fields.
+> The narrative I picked now drives the artwork: the server builds an image prompt from the idea's body, calls an image service, and stores the picture on disk. The idea record keeps the image URL and the exact prompt that produced it.
 
-*Open [page.tsx](src/app/contact-me-server-form/page.tsx), then [contact-form.tsx](src/app/contact-me-server-form/contact-form.tsx). Point to `<ContactForm />`, the input `name` attributes, `useActionState`, and `<form action={formAction} noValidate>`.*
+*The artwork appears on the card. Click **Regenerate picture** briefly or note it, then move on.*
 
-> The page component displays the heading and ContactForm. The form component handles the interactive interface. Each input’s name attribute gives its submitted value a key: name, email, or message.
->
-> useActionState connects submitContact to the form. It provides the latest result, the formAction function used by the form, and isPending. While the request is running, isPending disables the button and changes its text to Sending.
->
-> The form uses noValidate, so the validation messages we just saw come from the server’s checks.
+### 4:15–6:00 — CRUD sweep (all four object types)
 
-*Open [actions.ts](src/app/contact-me-server-form/actions.ts). Point to `"use server"`, `submitContact`, the `formData.get(...)` calls, and the validation branch.*
+*Fast, deliberate clicks:*
 
-> The use server directive marks this function to run on the server. Next.js handles the request dispatch. submitContact receives the previous form state and FormData containing the submitted fields.
->
-> It reads each field by name and passes the values to validateContactInput. Validation happens before saving because a request can contain missing or incorrect values regardless of what the interface displays.
+> Every object my API serves has a complete create, read, update and delete interface — ideas, blog posts, projects, and contact requests.
 
-*Open [contact-submissions.ts](src/lib/contact-submissions.ts) at `validateContactInput`, and briefly show [validation.ts](src/lib/validation.ts) for the email check. Return to the early error return in `actions.ts`.*
+- *Ideas: **Edit** the oracle idea → change a word → **Save changes**. Then **Delete** a scratch idea and confirm.*
+- *Blog posts: create from the oracle idea via **Start blog post** (show prefill), save; **Edit** it; **Delete** it.*
+- *Projects: create one, edit it, delete it.*
+- *Contact requests: submit one from the public form (keep this submission for the next segment!), then archive it, unarchive it, and leave it.*
 
-> Validation checks for empty or space-only fields and checks the email’s format. If any check fails, the action returns an error status, a general message, and field-specific errors. It returns before calling the save function, which explains why the invalid attempts are rejected.
+> Every operation goes through the API and persists to backend JSON — close a tab, come back tomorrow, it's all still there.
 
-*Show `saveContactSubmission` in `contact-submissions.ts`, then the awaited save and success return in `actions.ts`.*
+### 6:00–7:00 — API deep-dive (201 + logs)
 
-> If validation passes, saveContactSubmission trims the values, adds a unique ID and timestamp, and appends the record to JSON storage. The default file is data slash contact-submissions dot JSON.
->
-> The action waits for saving to finish before returning success. If saving throws an error, the catch block returns a failure message asking the visitor to try again.
+*Open DevTools → Network, clear. Go to the public **Contact (API)** page, submit a valid message. Click the POST request in Network.*
 
-*Return to `contact-form.tsx`. Point to `state.status`, `state.fieldErrors`, and the success `useEffect`. Briefly show [form-state.ts](src/app/contact-me-server-form/form-state.ts) if helpful.*
+> Here's the API doing its thing. The form posts JSON to /api/contacts — status 201 Created. And in the server terminal, every request logs one line through a shared logging module — you can see the 201 right there.
 
-> The returned result becomes the new state in useActionState. The component uses that state to display either the confirmation or the errors. On success, the effect resets the form and starts the confirmation’s dismissal timers. That completes the path from the visitor’s inputs, through the server, back to visible feedback.
+*Show the terminal line `[api] POST /api/contacts → 201`. Open `data/contact-submissions.json` — the new message is on disk.*
 
-*Open or refresh `/admin/contacts` while signed in. Locate the new `Alex Demo` entry and show its email, message, and submission time. Alternatively, show the matching record in the active `contact-submissions.json` file. If `PORTFOLIO_DATA_DIR` is configured, use that directory rather than the default `data` folder.*
+> The submission is persisted to the JSON store on the server. Create, read, update, delete — all four verbs work for every object type, through the interface and through the API.
 
-> Here is the message from the successful submission, with the same email and message I entered. In this application, sending a message means saving a contact request for the administrator to review.
+### 7:00–8:30 — Code explanation
 
-Before submitting the recording, check the actual footage against this list:
+*Open `src/app/admin/(protected)/ideas/idea-board.tsx`, then `src/components/idea-card.tsx`.*
 
-- [ ] All four main pages visibly loaded: `/`, `/about-me`, `/projects`, and `/contact-me-server-form`.
-- [ ] Both dynamic values appeared in the address bar with different records: `/projects/resume-site` and `/projects/task-tracker`.
-- [ ] An empty submission and a malformed-email submission showed validation feedback.
-- [ ] A valid submission showed the success confirmation.
-- [ ] The explanation connected named form fields → `formAction` → POST request → `submitContact` → server validation → JSON save → returned state → visible feedback.
-- [ ] The spoken explanation matched the results shown on screen and used wording you can explain comfortably.
+> Componentization: the idea board is the parent — it fetches from the API, holds the state, and renders one IdeaCard per idea. IdeaCard is purely presentational: it receives the idea object through props, plus optional callbacks like onEdit, onDelete, and onGenerateArtwork. It never fetches anything itself. That's the parent-to-child data flow the custom feature is built on.
+
+*Open `src/lib/briefs-store.ts` and `src/lib/briefs.ts`. Trace both directions:*
+
+> The LocalStorage feature works in two directions. Writing: the form state is a plain array of brief objects; on save, serializeBriefs JSON-stringifies it and localStorage.setItem stores it under one key. Reading: on load — and on every change, via useSyncExternalStore — the raw string comes back, JSON.parse runs it through readBriefsStorage, which validates every entry against the brief shape and drops anything malformed; the parsed array becomes state and the board renders it. Refresh is just read-again.
+
+*Open `src/lib/json-store.ts` briefly.*
+
+> On the server, the same pattern with JSON files: every write is queued and atomic — write to a temp file, rename — so concurrent submissions can't clobber each other.
+
+### 8:30–9:15 — Design choice, limitation, testing decision
+
+> Three things worth explaining. Design choice: the assistant gives three choices instead of one draft — ideation benefits from options, and picking keeps the human in the loop; the chosen text lands in editable form fields, so the AI proposes and the author decides. Browser storage limitation: LocalStorage is per-browser and per-machine, usually capped around five megabytes, and it can be disabled or full — my write path catches that and falls back to an in-memory snapshot with a warning, so the UI keeps working though the data won't survive a refresh. Testing decision: the JSON store is unit-tested with temp directories — including corrupt-data cases — and there's a 58-check end-to-end suite, `npm run qa`, that drives the real UI in headless Chrome: it caught real bugs, including races between React hydration and scripted clicks.
+
+### 9:15–9:30 — Close
+
+> Source code is in the public GitHub repo, MIT licensed, with the full API table and the test suite in the README. Thanks for watching.
+
+---
+
+## Rehearsal checklist (verify against actual footage)
+
+- [ ] All A2 pages loaded and usable (home, about, both project details, blogs).
+- [ ] Brief saved → **F5** → brief restored; corrupt-storage variant shown with the warning notice.
+- [ ] Seed → exactly three choice cards → one chosen → form filled → edited → saved.
+- [ ] Picture generated on the idea card and visible.
+- [ ] CRUD shown for ideas, blogs, projects, contacts (create/read/update/delete each).
+- [ ] Network tab showed `POST /api/contacts` → **201 Created**; terminal showed `[api] … → 201`; JSON file showed the record.
+- [ ] IdeaCard props flow explained from the board (parent fetch → props).
+- [ ] LocalStorage explained in both directions (state → serialize → setItem; getItem → parse → validate → state → display).
+- [ ] Design choice, storage limitation, and testing decision each explained.
+- [ ] Total runtime ≤ 10:00 (target 9:30).

@@ -14,12 +14,19 @@ import {
   subscribeToBriefs,
 } from "@/lib/briefs-store";
 import type { BriefsSnapshot } from "@/lib/briefs-store";
+import type { Choice } from "@/lib/ai";
 import FormFeedback from "@/components/form-feedback";
 
 export interface IdeaFormProps {
   editing: Idea | null;
   onSaved: (idea: Idea, mode: "create" | "edit") => void;
   onCancelEdit: () => void;
+}
+
+function summaryFromParagraph(paragraph: string): string {
+  const firstSentence = paragraph.split(/(?<=[.!?])\s/)[0] ?? paragraph;
+  const trimmed = firstSentence.trim();
+  return trimmed.length > 200 ? `${trimmed.slice(0, 197)}...` : trimmed;
 }
 
 export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormProps) {
@@ -41,14 +48,15 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
   const [message, setMessage] = useState("");
   const [isPending, setIsPending] = useState(false);
 
-  const [notes, setNotes] = useState("");
+  const [seed, setSeed] = useState("");
   const [briefId, setBriefId] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [origin, setOrigin] = useState<IdeaOrigin>(editing?.origin ?? "hand");
-  const [assistantPending, setAssistantPending] = useState(false);
-  const [assistantError, setAssistantError] = useState<string | null>(null);
+  const [choices, setChoices] = useState<Choice[]>([]);
+  const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
+  const [choicesPending, setChoicesPending] = useState(false);
+  const [choicesError, setChoicesError] = useState<string | null>(null);
   const [assistantConfigured, setAssistantConfigured] = useState<boolean | null>(null);
+  const [artworkPending, setArtworkPending] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -72,55 +80,87 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
     const brief = briefs.find((candidate) => candidate.id === id);
     if (!brief) return;
     setTargetType(brief.contentType === "project" ? "project" : "blog-post");
-    if (notes.trim().length === 0) {
-      setNotes(
-        `Audience: ${brief.audience}\nTone: ${brief.tone}\n\n${brief.keyPoints}`,
+    if (seed.trim().length === 0) {
+      setSeed(
+        `Audience: ${brief.audience}. Tone: ${brief.tone}. About: ${brief.title}. Points: ${brief.keyPoints}`,
       );
     }
   }
 
-  function handleImageChange(file: File | null) {
-    if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl);
-    }
-    setImageFile(file);
-    setImagePreviewUrl(file ? URL.createObjectURL(file) : null);
-  }
-
-  async function handleSuggest() {
-    setAssistantError(null);
-    setAssistantPending(true);
+  async function handleShowChoices() {
+    setChoicesError(null);
+    setChoicesPending(true);
     try {
-      const form = new FormData();
-      form.set("targetType", targetType);
-      form.set("notes", notes);
       const brief = briefs.find((candidate) => candidate.id === briefId);
-      if (brief) {
-        form.set("briefTitle", brief.title);
-        form.set("briefAudience", brief.audience);
-        form.set("briefTone", brief.tone);
-        form.set("briefKeyPoints", brief.keyPoints);
-      }
-      if (imageFile) {
-        form.set("image", imageFile);
-      }
-      const response = await fetch("/api/assistant", { method: "POST", body: form });
+      const response = await fetch("/api/assistant/choices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seed,
+          targetType,
+          brief: brief
+            ? {
+                title: brief.title,
+                audience: brief.audience,
+                tone: brief.tone,
+                keyPoints: brief.keyPoints,
+              }
+            : null,
+        }),
+      });
       const result = await response.json();
-      if (response.ok && result.ok) {
-        setTitle(result.suggestion.title);
-        setSummary(result.suggestion.summary);
-        setBody(result.suggestion.body);
-        setOrigin(imageFile ? "assistant-image" : "assistant");
-        titleRef.current?.focus();
+      if (response.ok && result.ok && Array.isArray(result.choices)) {
+        setChoices(result.choices);
+        setSelectedChoice(null);
       } else {
-        setAssistantError(
+        setChoicesError(
           result.message ?? "The assistant could not help right now. Please try again.",
         );
       }
     } catch {
-      setAssistantError("Could not reach the server. Please try again.");
+      setChoicesError("Could not reach the server. Please try again.");
     } finally {
-      setAssistantPending(false);
+      setChoicesPending(false);
+    }
+  }
+
+  function handleSelectChoice(index: number) {
+    const choice = choices[index];
+    if (!choice) {
+      return;
+    }
+    setSelectedChoice(index);
+    setSummary(summaryFromParagraph(choice.paragraph));
+    setBody(choice.paragraph);
+    setOrigin("assistant");
+    titleRef.current?.focus();
+  }
+
+  async function handleGenerateArtwork(ideaId: string) {
+    setArtworkPending(true);
+    setStatus("idle");
+    try {
+      const response = await fetch("/api/assistant/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ideaId }),
+      });
+      const result = await response.json();
+      if (response.ok && result.ok && result.idea) {
+        onSaved(result.idea, editing ? "edit" : "create");
+        setStatus("success");
+        setMessage("Picture generated and attached to the idea.");
+      } else {
+        setStatus("error");
+        setMessage(
+          result.message ?? "The picture could not be generated. Please try again.",
+        );
+      }
+    } catch {
+      setStatus("error");
+      setMessage("Could not reach the server. Please try again.");
+    } finally {
+      setArtworkPending(false);
     }
   }
 
@@ -144,7 +184,8 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
       );
       const result = await response.json();
       if (response.ok && result.ok && result.idea) {
-        onSaved(result.idea, editing ? "edit" : "create");
+        const saved: Idea = result.idea;
+        onSaved(saved, editing ? "edit" : "create");
         if (editing) {
           setStatus("success");
           setMessage("Idea updated.");
@@ -152,12 +193,16 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
           setTitle("");
           setSummary("");
           setBody("");
-          setNotes("");
+          setSeed("");
           setBriefId("");
-          handleImageChange(null);
+          setChoices([]);
+          setSelectedChoice(null);
           setOrigin("hand");
           setStatus("success");
           setMessage("Idea saved to the server.");
+        }
+        if (selectedChoice !== null && choices[selectedChoice]) {
+          await handleGenerateArtwork(saved.id);
         }
       } else if (result.fieldErrors) {
         setFieldErrors(result.fieldErrors);
@@ -186,6 +231,8 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
       </p>
     ) : null;
 
+  const selectedNarrative = selectedChoice !== null ? choices[selectedChoice] : null;
+
   return (
     <form onSubmit={handleSave} noValidate>
       {status !== "idle" ? (
@@ -193,12 +240,17 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
       ) : null}
 
       {editing ? null : (
-      <section className="briefs-privacy" aria-label="AI assistant">
-        <h3 style={{ marginTop: 0 }}>Draft with the assistant</h3>
+      <section className="briefs-privacy" aria-label="AI choice assistant">
+        <h3 style={{ marginTop: 0 }}>The problem is choice.</h3>
+        <p>
+          Type a seed — a few words or sentences. The assistant returns three
+          distinct directions; you pick one and it becomes the idea.
+        </p>
         {assistantConfigured === false ? (
           <p className="form-feedback form-feedback-error" role="status">
             The AI assistant is not configured on this server (set
-            ANTHROPIC_API_KEY). Everything else on this page keeps working.
+            ANTHROPIC_API_KEY, or AI_PROVIDER=ollama). Everything else on this
+            page keeps working.
           </p>
         ) : null}
         <div className="field-group">
@@ -208,7 +260,7 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
             value={briefId}
             onChange={(event) => applyBrief(event.target.value)}
           >
-            <option value="">No brief — freeform notes</option>
+            <option value="">No brief — write your own seed</option>
             {briefs.map((brief) => (
               <option key={brief.id} value={brief.id}>
                 {brief.title}
@@ -217,47 +269,69 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
           </select>
         </div>
         <div className="field-group">
-          <label htmlFor="idea-notes">Notes for the assistant</label>
+          <label htmlFor="idea-seed">Your seed</label>
           <textarea
-            id="idea-notes"
-            rows={4}
-            placeholder="describe what you want to write — required before asking the assistant"
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
+            id="idea-seed"
+            rows={3}
+            placeholder="e.g. database migrations explained through bad relationships"
+            value={seed}
+            onChange={(event) => setSeed(event.target.value)}
           />
-        </div>
-        <div className="field-group">
-          <label htmlFor="idea-image">Attach an image (optional)</label>
-          <input
-            id="idea-image"
-            type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp"
-            onChange={(event) => handleImageChange(event.target.files?.[0] ?? null)}
-          />
-          {imagePreviewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- local object URL preview, not a site asset
-            <img
-              src={imagePreviewUrl}
-              alt="Preview of the attached image"
-              style={{ maxWidth: 240, maxHeight: 160, marginTop: 8, display: "block" }}
-            />
-          ) : null}
         </div>
         <button
           className="secondary-button"
           type="button"
-          disabled={assistantPending}
-          onClick={handleSuggest}
+          disabled={choicesPending}
+          onClick={handleShowChoices}
         >
-          {assistantPending ? "Asking the assistant…" : "Suggest with assistant"}
+          {choicesPending ? "Consulting the oracle…" : "Show me the choices"}
         </button>
-        {assistantError ? (
+        {choicesError ? (
           <p className="form-feedback form-feedback-error" role="alert">
-            {assistantError}
+            {choicesError}
+          </p>
+        ) : null}
+        {choices.length > 0 ? (
+          <div className="choices-grid" role="listbox" aria-label="Narrative choices">
+            {choices.map((choice, index) => (
+              <button
+                type="button"
+                key={`${choice.angle}-${index}`}
+                className={`choice-card${selectedChoice === index ? " choice-card-selected" : ""}`}
+                role="option"
+                aria-selected={selectedChoice === index}
+                onClick={() => handleSelectChoice(index)}
+              >
+                <span className="tag">{choice.angle}</span>
+                <p>{choice.paragraph}</p>
+                <span className="choice-card-cta">
+                  {selectedChoice === index ? "Chosen — edit below" : "Choose this one"}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {selectedNarrative ? (
+          <p className="briefs-count">
+            Choice {(selectedChoice ?? 0) + 1} of {choices.length} fills the summary and
+            body below — edit anything before saving.
           </p>
         ) : null}
       </section>
       )}
+
+      {editing && editing.body.trim().length > 0 ? (
+        <p>
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={artworkPending}
+            onClick={() => handleGenerateArtwork(editing.id)}
+          >
+            {artworkPending ? "Generating picture…" : editing.imageUrl ? "Regenerate picture" : "Generate picture"}
+          </button>
+        </p>
+      ) : null}
 
       <div className="field-group">
         <label htmlFor="idea-type">This idea becomes *</label>

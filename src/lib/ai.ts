@@ -1,6 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
-import { validateIdeaInput } from "@/data/ideas";
 
 export const ASSISTANT_MODEL = "claude-opus-5-5";
 export const ASSISTANT_MAX_TOKENS = 4096;
@@ -14,14 +13,12 @@ export function getAssistantProvider(): AssistantProvider {
   return process.env.AI_PROVIDER === "ollama" ? "ollama" : "anthropic";
 }
 
-export const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
-export const ASSISTANT_IMAGE_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-] as const;
-export type AssistantImageType = (typeof ASSISTANT_IMAGE_TYPES)[number];
+export function isAssistantConfigured(): boolean {
+  if (getAssistantProvider() === "ollama") {
+    return true;
+  }
+  return Boolean(process.env.ANTHROPIC_API_KEY);
+}
 
 export interface BriefDetails {
   title: string;
@@ -30,80 +27,84 @@ export interface BriefDetails {
   keyPoints: string;
 }
 
-export interface AssistantRequest {
+export interface ChoicesRequest {
+  seed: string;
   targetType: string;
-  notes: string;
   brief?: BriefDetails | null;
-  image?: { mediaType: AssistantImageType; base64: string } | null;
 }
 
-export interface Suggestion {
-  title: string;
-  summary: string;
-  body: string;
+export interface Choice {
+  angle: string;
+  paragraph: string;
 }
 
-export type AssistantOutcome =
-  | { status: "ready"; suggestion: Suggestion }
+export type ChoicesOutcome =
+  | { status: "ready"; choices: Choice[] }
   | { status: "refusal"; message: string }
   | { status: "error"; message: string };
 
-export function isAssistantConfigured(): boolean {
-  if (getAssistantProvider() === "ollama") {
-    return true;
-  }
-  return Boolean(process.env.ANTHROPIC_API_KEY);
-}
-
-export function validateAssistantRequest(input: {
+export function validateChoicesRequest(input: {
+  seed: string;
   targetType: string;
-  notes: string;
-  image?: { mediaType: string; sizeBytes: number } | null;
-}): { ok: true } | { ok: false; status: 400 | 413; message: string } {
-  if (input.notes.trim().length === 0) {
-    return { ok: false, status: 400, message: "Describe what you want to write first." };
+}): { ok: true } | { ok: false; status: 400; message: string } {
+  if (input.seed.trim().length < 3) {
+    return {
+      ok: false,
+      status: 400,
+      message: "Give the assistant a seed of a few words or sentences first.",
+    };
   }
-  if (input.image) {
-    if (!ASSISTANT_IMAGE_TYPES.includes(input.image.mediaType as AssistantImageType)) {
-      return {
-        ok: false,
-        status: 400,
-        message: "Unsupported image type. Use PNG, JPEG, WebP or GIF.",
-      };
-    }
-    if (input.image.sizeBytes > IMAGE_MAX_BYTES) {
-      return {
-        ok: false,
-        status: 413,
-        message: "Image is too large. The API allows up to 10 MB per image.",
-      };
-    }
+  if (input.seed.trim().length > 2000) {
+    return {
+      ok: false,
+      status: 400,
+      message: "Keep the seed under 2000 characters.",
+    };
+  }
+  if (input.targetType !== "blog-post" && input.targetType !== "project") {
+    return {
+      ok: false,
+      status: 400,
+      message: "Choose what the idea becomes: blog post or project.",
+    };
   }
   return { ok: true };
 }
 
-const SUGGESTION_SCHEMA = {
+const CHOICES_SCHEMA = {
   type: "object",
   properties: {
-    title: { type: "string" },
-    summary: { type: "string" },
-    body: { type: "string" },
+    choices: {
+      type: "array",
+      minItems: 3,
+      maxItems: 3,
+      items: {
+        type: "object",
+        properties: {
+          angle: { type: "string" },
+          paragraph: { type: "string" },
+        },
+        required: ["angle", "paragraph"],
+        additionalProperties: false,
+      },
+    },
   },
-  required: ["title", "summary", "body"],
+  required: ["choices"],
   additionalProperties: false,
 } as const;
 
-export function buildAssistantPrompt(input: AssistantRequest): string {
+export function buildChoicesPrompt(input: ChoicesRequest): string {
   const targetLabel =
     input.targetType === "project" ? "project entry" : "blog post";
   const lines = [
-    `You are helping a developer draft content for their portfolio website.`,
-    `Suggest a ${targetLabel}: a title, a one-line summary, and a body.`,
-    `Keep the title within 80 characters, the summary within 200 characters, and the body within 5000 characters.`,
-    `Respond with ONLY a JSON object with the keys "title", "summary" and "body" — no markdown formatting, no commentary before or after.`,
+    `You are helping a developer brainstorm content for their portfolio website.`,
+    `From the seed below, produce exactly THREE distinct narrative directions for a ${targetLabel}.`,
+    `The three angles must be genuinely different approaches (for example: a practical explainer, a contrarian take, a personal anecdote) — not rewrites of the same idea.`,
+    `Each choice: "angle" is a 1-3 word label for the approach (lowercase); "paragraph" is a 2-4 sentence narrative the writer could publish.`,
+    `Respond with ONLY a JSON object of the shape {"choices":[{"angle":"...","paragraph":"..."}]} — no markdown, no commentary.`,
     ``,
-    `What I want to write:`,
-    input.notes.trim(),
+    `Seed:`,
+    input.seed.trim(),
   ];
   if (input.brief) {
     lines.push(
@@ -119,73 +120,66 @@ export function buildAssistantPrompt(input: AssistantRequest): string {
         .map((point) => `  - ${point.trim()}`),
     );
   }
-  if (input.image) {
-    lines.push(
-      ``,
-      `An image is attached (a screenshot or photo). Use it as context for what the content should cover.`,
-    );
-  }
   return lines.join("\n");
 }
 
-export function extractSuggestionFromReply(reply: {
+function isValidChoice(value: unknown): value is Choice {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const entry = value as Record<string, unknown>;
+  return (
+    typeof entry.angle === "string" &&
+    entry.angle.trim().length > 0 &&
+    entry.angle.trim().length <= 40 &&
+    typeof entry.paragraph === "string" &&
+    entry.paragraph.trim().length > 0 &&
+    entry.paragraph.trim().length <= 4000
+  );
+}
+
+export function extractChoicesFromReply(reply: {
   stopReason?: string;
   parsedOutput?: unknown;
-}): AssistantOutcome {
+}): ChoicesOutcome {
   if (reply.stopReason === "refusal") {
     return {
       status: "refusal",
       message:
-        "The assistant declined this request. Try rewording your notes or removing the image.",
+        "The assistant declined this request. Try a different seed.",
     };
   }
   if (reply.stopReason === "max_tokens") {
     return {
       status: "error",
       message:
-        "The assistant's answer was cut off by the token limit. Try shorter notes.",
+        "The assistant's answer was cut off by the token limit. Try a shorter seed.",
     };
   }
-  const candidate = reply.parsedOutput as Partial<Suggestion> | null | undefined;
-  if (
-    typeof candidate !== "object" ||
-    candidate === null ||
-    typeof candidate.title !== "string" ||
-    typeof candidate.summary !== "string" ||
-    typeof candidate.body !== "string"
-  ) {
+  const candidate = reply.parsedOutput as
+    | { choices?: unknown }
+    | unknown[]
+    | null
+    | undefined;
+  const rawChoices = Array.isArray(candidate)
+    ? candidate
+    : Array.isArray(candidate?.choices)
+      ? candidate.choices
+      : [];
+  const choices = rawChoices
+    .filter(isValidChoice)
+    .map((choice) => ({
+      angle: choice.angle.trim().toLowerCase(),
+      paragraph: choice.paragraph.trim(),
+    }));
+  if (choices.length === 0) {
     return {
       status: "error",
       message:
-        "The assistant's reply was not in the expected format. Please try again.",
+        "The assistant's reply was not in the expected format. Shuffle and try again.",
     };
   }
-  const suggestion = {
-    title: candidate.title.trim(),
-    summary: candidate.summary.trim(),
-    body: candidate.body.trim(),
-  };
-  const fieldErrors = validateIdeaInput({
-    title: suggestion.title,
-    summary: suggestion.summary,
-    body: suggestion.body,
-    targetType: "blog-post",
-  });
-  if (fieldErrors.title || fieldErrors.summary || fieldErrors.body) {
-    return {
-      status: "error",
-      message:
-        "The assistant's suggestion missed the length limits. Edit your notes and try again.",
-    };
-  }
-  return { status: "ready", suggestion };
-}
-
-function defaultClient(): Anthropic | null {
-  if (!isAssistantConfigured()) {
-    return null;
-  }
-  return new Anthropic();
+  return { status: "ready", choices };
 }
 
 interface ParseLikeReply {
@@ -204,22 +198,31 @@ interface OllamaChatResponse {
   error?: string;
 }
 
-export async function requestSuggestionFromOllama(
-  input: AssistantRequest,
+function parseLooseJson(raw: string): unknown {
+  const attempt = (text: string): unknown => {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return undefined;
+    }
+  };
+  return (
+    attempt(raw) ??
+    attempt(raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "")) ??
+    attempt(raw.slice(Math.max(raw.indexOf("{"), 0), raw.lastIndexOf("}") + 1)) ??
+    null
+  );
+}
+
+export async function requestChoicesFromOllama(
+  input: ChoicesRequest,
   fetchImpl: typeof fetch = fetch,
-): Promise<AssistantOutcome> {
+): Promise<ChoicesOutcome> {
   const baseUrl = (process.env.OLLAMA_BASE_URL || OLLAMA_DEFAULT_BASE_URL).replace(/\/+$/, "");
   const model = process.env.OLLAMA_MODEL || OLLAMA_DEFAULT_MODEL;
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (process.env.OLLAMA_API_KEY) {
     headers.authorization = `Bearer ${process.env.OLLAMA_API_KEY}`;
-  }
-  const message: { role: "user"; content: string; images?: string[] } = {
-    role: "user",
-    content: buildAssistantPrompt(input),
-  };
-  if (input.image) {
-    message.images = [input.image.base64];
   }
 
   let response: Response;
@@ -229,8 +232,8 @@ export async function requestSuggestionFromOllama(
       headers,
       body: JSON.stringify({
         model,
-        messages: [message],
-        format: SUGGESTION_SCHEMA,
+        messages: [{ role: "user", content: buildChoicesPrompt(input) }],
+        format: CHOICES_SCHEMA,
         stream: false,
         think: false,
         options: { num_predict: ASSISTANT_MAX_TOKENS },
@@ -262,34 +265,29 @@ export async function requestSuggestionFromOllama(
   if (payload?.error) {
     return { status: "error", message: `Ollama returned an error. ${payload.error}`.trim() };
   }
-  const raw = payload?.message?.content ?? "";
-  let parsedOutput: unknown = null;
-  const attempt = (text: string): unknown => {
-    try {
-      return JSON.parse(text);
-    } catch {
-      return undefined;
-    }
-  };
-  parsedOutput =
-    attempt(raw) ??
-    attempt(raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "")) ??
-    attempt(raw.slice(Math.max(raw.indexOf("{"), 0), raw.lastIndexOf("}") + 1)) ??
-    null;
-  return extractSuggestionFromReply({ parsedOutput });
+  return extractChoicesFromReply({
+    parsedOutput: parseLooseJson(payload?.message?.content ?? ""),
+  });
 }
 
-export interface SuggestionDeps {
+export interface ChoicesDeps {
   client?: ParseLikeClient | null;
   fetchImpl?: typeof fetch;
 }
 
-export async function requestSuggestion(
-  input: AssistantRequest,
-  deps: SuggestionDeps = {},
-): Promise<AssistantOutcome> {
+function defaultClient(): Anthropic | null {
+  if (!isAssistantConfigured()) {
+    return null;
+  }
+  return new Anthropic();
+}
+
+export async function requestChoices(
+  input: ChoicesRequest,
+  deps: ChoicesDeps = {},
+): Promise<ChoicesOutcome> {
   if (getAssistantProvider() === "ollama") {
-    return requestSuggestionFromOllama(input, deps.fetchImpl);
+    return requestChoicesFromOllama(input, deps.fetchImpl);
   }
 
   const selected = deps.client === undefined ? (defaultClient() as ParseLikeClient | null) : deps.client;
@@ -301,31 +299,16 @@ export async function requestSuggestion(
     };
   }
 
-  const prompt = buildAssistantPrompt(input);
-  const content = input.image
-    ? [
-        {
-          type: "image" as const,
-          source: {
-            type: "base64" as const,
-            media_type: input.image.mediaType,
-            data: input.image.base64,
-          },
-        },
-        { type: "text" as const, text: prompt },
-      ]
-    : prompt;
-
   try {
     const reply = await selected.messages.parse({
       model: ASSISTANT_MODEL,
       max_tokens: ASSISTANT_MAX_TOKENS,
-      messages: [{ role: "user", content }],
+      messages: [{ role: "user", content: buildChoicesPrompt(input) }],
       output_config: {
-        format: jsonSchemaOutputFormat(SUGGESTION_SCHEMA),
+        format: jsonSchemaOutputFormat(CHOICES_SCHEMA),
       },
     });
-    return extractSuggestionFromReply({
+    return extractChoicesFromReply({
       stopReason: reply.stopReason,
       parsedOutput: reply.parsedOutput,
     });
@@ -336,4 +319,75 @@ export async function requestSuggestion(
         "Could not reach the AI assistant. Check the API key and try again shortly.",
     };
   }
+}
+
+export const IMAGE_GEN_TIMEOUT_MS = 60_000;
+export const POLLINATIONS_DEFAULT_URL = "https://image.pollinations.ai";
+const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+
+export type NarrativeImageOutcome =
+  | {
+      status: "ready";
+      imagePrompt: string;
+      bytes: Buffer;
+      contentType: string;
+      extension: string;
+    }
+  | { status: "error"; message: string };
+
+export function buildImagePrompt(narrative: string): string {
+  const condensed = narrative.replace(/\s+/g, " ").trim().slice(0, 400);
+  return `Editorial illustration for a developer blog post. Abstract, modern, clean vector style. Subject: ${condensed}`;
+}
+
+const EXTENSIONS: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+};
+
+export async function requestNarrativeImage(
+  narrative: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<NarrativeImageOutcome> {
+  const imagePrompt = buildImagePrompt(narrative);
+  const base = (process.env.IMAGE_PROVIDER_URL || POLLINATIONS_DEFAULT_URL).replace(/\/+$/, "");
+  const seed = Math.floor(Math.random() * 1_000_000);
+  const url = `${base}/prompt/${encodeURIComponent(imagePrompt)}?width=1024&height=768&nologo=true&seed=${seed}`;
+
+  let response: Response;
+  try {
+    response = await fetchImpl(url, {
+      signal: AbortSignal.timeout(IMAGE_GEN_TIMEOUT_MS),
+    });
+  } catch {
+    return {
+      status: "error",
+      message:
+        "Could not reach the image service. The narrative is saved — try generating the picture again shortly.",
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      status: "error",
+      message: `The image service returned an error (${response.status}). Try again shortly.`,
+    };
+  }
+  const contentType = (response.headers.get("content-type") ?? "").split(";")[0];
+  const extension = EXTENSIONS[contentType];
+  if (!extension) {
+    return {
+      status: "error",
+      message: "The image service returned an unsupported file type.",
+    };
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.byteLength === 0) {
+    return { status: "error", message: "The image service returned an empty file." };
+  }
+  if (bytes.byteLength > IMAGE_MAX_BYTES) {
+    return { status: "error", message: "The image service returned a file that is too large." };
+  }
+  return { status: "ready", imagePrompt, bytes, contentType, extension };
 }

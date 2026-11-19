@@ -14,13 +14,25 @@ export default function IdeaCard({
   idea,
   onEdit,
   onDelete,
+  onGenerateArtwork,
+  artworkBusy,
 }: {
   idea: Idea;
   onEdit?: () => void;
   onDelete?: () => void;
+  onGenerateArtwork?: () => void;
+  artworkBusy?: boolean;
 }) {
   return (
     <li className="card brief-card">
+      {idea.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- dynamic per-idea artwork served by the images API, not a site asset
+        <img
+          className="idea-artwork"
+          src={idea.imageUrl}
+          alt={`Generated artwork for the idea "${idea.title}"`}
+        />
+      ) : null}
       <div className="brief-card-head">
         <h3>{idea.title}</h3>
         <div className="brief-card-actions">
@@ -46,6 +58,22 @@ export default function IdeaCard({
           updated {formatDateTime(idea.updatedAt)}
         </span>
       </p>
+      {onGenerateArtwork ? (
+        <p className="brief-card-actions">
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={artworkBusy}
+            onClick={onGenerateArtwork}
+          >
+            {artworkBusy
+              ? "Generating picture…"
+              : idea.imageUrl
+                ? "Regenerate picture"
+                : "Generate picture"}
+          </button>
+        </p>
+      ) : null}
       {onEdit ? (
         <p className="brief-card-actions">
           <a className="secondary-button" href={`/admin/blogs?from-idea=${idea.id}`}>
