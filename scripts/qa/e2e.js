@@ -279,10 +279,14 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   const oracleCard = `[...document.querySelectorAll(".brief-card")].find((c) => c.querySelector("h3")?.textContent === "Oracle Choice")`;
   await evalJs(`${oracleCard}?.querySelector(".brief-card-actions button")?.click()`);
   let artworkShown = false;
-  for (let i = 0; i < 40; i += 1) {
+  for (let i = 0; i < 60; i += 1) {
     await sleep(3000);
     artworkShown = await evalJs(`Boolean(${oracleCard}?.querySelector("img.idea-artwork"))`);
     if (artworkShown) break;
+    const pending = await evalJs(`document.querySelector(".form-feedback-success")?.textContent ?? ""`);
+    if (pending.includes("unreachable") && i % 2 === 1) {
+      await evalJs(`${oracleCard}?.querySelector(".brief-card-actions button")?.click()`);
+    }
   }
   check("generated picture appears on the idea card", artworkShown);
   const oracleId = await evalJs(`${oracleCard}?.querySelector("a[href*='from-idea']")?.getAttribute("href")?.split("=")[1]`);
