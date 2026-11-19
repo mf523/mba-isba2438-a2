@@ -9,6 +9,7 @@ import {
   getIdeaById,
   isUsableIdeaId,
   listIdeas,
+  markIdeaUsed,
   updateIdea,
   updateIdeaImage,
   validateIdeaInput,
@@ -191,5 +192,37 @@ describe("ideas store", () => {
     });
     assert.equal(failedRegen?.imageUrl, `/api/images/${created.id}`);
     assert.equal(failedRegen?.imagePrompt, "second prompt");
+  });
+
+  it("marks ideas used with a deduplicated link", async () => {
+    const created = await addIdea({
+      title: "Will become a post",
+      summary: "Traceability test.",
+      body: "Body.",
+      targetType: "blog-post",
+      origin: "hand",
+    });
+    assert.equal(created.status, undefined);
+    const used = await markIdeaUsed(created.id, {
+      type: "blog-post",
+      title: "The published post",
+      href: "/blogs/the-published-post",
+    });
+    assert.equal(used?.status, "used");
+    assert.equal(used?.usedAs?.length, 1);
+    const again = await markIdeaUsed(created.id, {
+      type: "blog-post",
+      title: "The published post",
+      href: "/blogs/the-published-post",
+    });
+    assert.equal(again?.usedAs?.length, 1);
+    const second = await markIdeaUsed(created.id, {
+      type: "project",
+      title: "The project",
+      href: "/projects/the-project",
+    });
+    assert.equal(second?.usedAs?.length, 2);
+    const reread = await getIdeaById(created.id);
+    assert.equal(reread?.status, "used");
   });
 });

@@ -36,7 +36,7 @@ Read the blockquotes as narration, adapting the wording to your speaking style. 
 
 *Navigate to **Admin**, sign in with the admin password, open **Briefs**.*
 
-> Briefs are my planning notes — what a piece of content is, who it's for, how it should sound. They're private working notes, so they live in browser LocalStorage, not on the server.
+> Briefs are my planning notes — what a piece of content is, who it's for, how it should sound. They're private working notes, so they live in browser LocalStorage, not on the server. Each brief card has a "Start an idea" action that hands the brief to the idea oracle.
 
 *Fill the brief form: title "Migration story", type Blog post, audience, tone, two key points. Click save. Point at the new brief card. Press **F5**.*
 
@@ -50,9 +50,9 @@ Read the blockquotes as narration, adapting the wording to your speaking style. 
 
 ### 2:15–3:30 — The oracle (custom backend feature: ideas)
 
-*Open **Ideas**. Point at the "The problem is choice." panel.*
+*Open **Ideas** — the saved-ideas board is on top. Click **New idea**. Point at the "The problem is choice." panel.*
 
-> Ideation is hard because the problem is choice. So instead of one AI draft, the assistant is an oracle of options: I give it a seed and it returns three distinct narrative directions.
+> Ideation is hard because the problem is choice. So instead of one AI draft, the assistant is an oracle of options: I give it a seed and it returns three distinct narrative directions — each with its own working headline and one-line summary.
 
 *Type the seed: "database migrations explained through bad relationships". Click **Show me the choices**. While loading, narrate.*
 
@@ -60,7 +60,7 @@ Read the blockquotes as narration, adapting the wording to your speaking style. 
 
 *Three cards appear. Hover each, then click one.*
 
-> Three different takes: practical, contrarian, personal. Choosing one fills the idea's summary and body — and it stays editable. The choice is the input; I'm still the author.
+> Three different takes: practical, contrarian, personal. Choosing one fills the idea's title, summary and body — a working headline included — and everything stays editable. The choice is the input; I'm still the author.
 
 *Edit the title, tweak a word in the body, click **Save idea**.*
 
@@ -85,7 +85,7 @@ Read the blockquotes as narration, adapting the wording to your speaking style. 
 - *Projects: create one, edit it, delete it.*
 - *Contact requests: submit one from the public form (keep this submission for the next segment!), then archive it, unarchive it, and leave it.*
 
-> Every operation goes through the API and persists to backend JSON — close a tab, come back tomorrow, it's all still there.
+> Every operation goes through the API and persists to backend JSON — close a tab, come back tomorrow, it's all still there. And notice the traceability: when a post is created from an idea, the idea is marked "used" on the board with a link to what it became, and the form's address is cleared so a reload can't invite a duplicate.
 
 ### 6:00–7:00 — API deep-dive (201 + logs)
 
@@ -124,10 +124,13 @@ Read the blockquotes as narration, adapting the wording to your speaking style. 
 ## Rehearsal checklist (verify against actual footage)
 
 - [ ] All A2 pages loaded and usable (home, about, both project details, blogs).
-- [ ] Brief saved → **F5** → brief restored; corrupt-storage variant shown with the warning notice.
-- [ ] Seed → exactly three choice cards → one chosen → form filled → edited → saved.
-- [ ] Picture generated on the idea card and visible.
+- [ ] Brief saved → **F5** → brief restored; corrupt-storage variant shown with the warning notice; brief card shows **Start an idea**.
+- [ ] Ideas board renders first; **New idea** opens the oracle.
+- [ ] Seed → exactly three choice cards (each with headline + summary) → one chosen → title/summary/body filled → edited → saved.
+- [ ] Picture generated on the idea card and visible; card expands via **Read the idea**.
+- [ ] Blog created from the idea → idea shows the **used** tag with a link to the post; address bar cleared.
 - [ ] CRUD shown for ideas, blogs, projects, contacts (create/read/update/delete each).
+- [ ] Matching "Start …" action is the primary (accent) button on each card.
 - [ ] Network tab showed `POST /api/contacts` → **201 Created**; terminal showed `[api] … → 201`; JSON file showed the record.
 - [ ] IdeaCard props flow explained from the board (parent fetch → props).
 - [ ] LocalStorage explained in both directions (state → serialize → setItem; getItem → parse → validate → state → display).

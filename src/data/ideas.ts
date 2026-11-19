@@ -1,5 +1,12 @@
 export type IdeaTargetType = "blog-post" | "project";
 export type IdeaOrigin = "hand" | "assistant" | "assistant-image";
+export type IdeaStatus = "draft" | "used";
+
+export interface IdeaUsedLink {
+  type: IdeaTargetType;
+  title: string;
+  href: string;
+}
 
 export interface Idea {
   id: string;
@@ -10,6 +17,8 @@ export interface Idea {
   origin: IdeaOrigin;
   imagePrompt?: string;
   imageUrl?: string;
+  status?: IdeaStatus;
+  usedAs?: IdeaUsedLink[];
   createdAt: string;
   updatedAt: string;
 }
@@ -24,6 +33,10 @@ export const IDEA_ORIGIN_LABELS: Record<IdeaOrigin, string> = {
   assistant: "Suggested by the assistant",
   "assistant-image": "Suggested from an image",
 };
+
+export function isIdeaStatus(value: unknown): value is IdeaStatus {
+  return value === "draft" || value === "used";
+}
 
 export const DEFAULT_IDEAS: Idea[] = [
   {

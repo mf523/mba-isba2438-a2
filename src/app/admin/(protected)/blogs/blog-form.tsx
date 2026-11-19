@@ -62,6 +62,7 @@ export default function BlogForm({
     const data = new FormData(form);
     setIsPending(true);
     setStatus("idle");
+    const fromIdeaId = new URLSearchParams(window.location.search).get("from-idea");
     try {
       const response = await fetch(
         editing ? `/api/blogs/${editing.slug}` : "/api/blogs",
@@ -73,6 +74,7 @@ export default function BlogForm({
             slug: data.get("slug"),
             summary: data.get("summary"),
             content: data.get("content"),
+            ...(fromIdeaId ? { ideaId: fromIdeaId } : {}),
           }),
         },
       );
@@ -91,6 +93,9 @@ export default function BlogForm({
         setPrefillNotice(null);
         if (!editing) {
           form.reset();
+          if (fromIdeaId) {
+            window.history.replaceState(null, "", window.location.pathname);
+          }
         }
       } else if (result.fieldErrors) {
         setStatus("error");

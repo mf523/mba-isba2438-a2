@@ -6,6 +6,7 @@ import {
   parseTechStackInput,
   validateProjectInput,
 } from "@/lib/projects";
+import { isUsableIdeaId, markIdeaUsed } from "@/lib/ideas";
 import { slugify } from "@/lib/validation";
 
 export const GET = withRoute(async (request: Request) => {
@@ -76,6 +77,18 @@ export const POST = withRoute(async (request: Request) => {
   }
 
   logApiCall(request, 201);
+  const fromIdeaId =
+    typeof input.ideaId === "string" ? input.ideaId.trim() : "";
+  if (isUsableIdeaId(fromIdeaId)) {
+    const linked = await markIdeaUsed(fromIdeaId, {
+      type: "project",
+      title: result.project.title,
+      href: `/projects/${result.project.slug}`,
+    });
+    if (linked) {
+      console.log(`[ideas] idea ${fromIdeaId} marked used → /projects/${result.project.slug}`);
+    }
+  }
   return NextResponse.json(
     { ok: true, project: result.project },
     { status: 201 },

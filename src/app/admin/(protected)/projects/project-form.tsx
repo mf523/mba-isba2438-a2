@@ -62,6 +62,7 @@ export default function ProjectForm({
     const data = new FormData(form);
     setIsPending(true);
     setStatus("idle");
+    const fromIdeaId = new URLSearchParams(window.location.search).get("from-idea");
     try {
       const response = await fetch(
         editing ? `/api/projects/${editing.slug}` : "/api/projects",
@@ -76,6 +77,7 @@ export default function ProjectForm({
             techStack: data.get("techStack"),
             repoUrl: data.get("repoUrl"),
             liveUrl: data.get("liveUrl"),
+            ...(fromIdeaId ? { ideaId: fromIdeaId } : {}),
           }),
         },
       );
@@ -94,6 +96,9 @@ export default function ProjectForm({
         setPrefillNotice(null);
         if (!editing) {
           form.reset();
+          if (fromIdeaId) {
+            window.history.replaceState(null, "", window.location.pathname);
+          }
         }
       } else if (result.fieldErrors) {
         setStatus("error");

@@ -36,6 +36,8 @@ export interface ChoicesRequest {
 export interface Choice {
   angle: string;
   paragraph: string;
+  title?: string;
+  summary?: string;
 }
 
 export type ChoicesOutcome =
@@ -100,8 +102,8 @@ export function buildChoicesPrompt(input: ChoicesRequest): string {
     `You are helping a developer brainstorm content for their portfolio website.`,
     `From the seed below, produce exactly THREE distinct narrative directions for a ${targetLabel}.`,
     `The three angles must be genuinely different approaches (for example: a practical explainer, a contrarian take, a personal anecdote) — not rewrites of the same idea.`,
-    `Each choice: "angle" is a 1-3 word label for the approach (lowercase); "paragraph" is a 2-4 sentence narrative the writer could publish.`,
-    `Respond with ONLY a JSON object of the shape {"choices":[{"angle":"...","paragraph":"..."}]} — no markdown, no commentary.`,
+    `Each choice: "angle" is a 1-3 word label for the approach (lowercase); "title" is a specific working headline (max 80 characters, not generic); "summary" is a one-line summary of that narrative (max 200 characters); "paragraph" is a 2-4 sentence narrative the writer could publish.`,
+    `Respond with ONLY a JSON object of the shape {"choices":[{"angle":"...","title":"...","summary":"...","paragraph":"..."}]} — no markdown, no commentary.`,
     ``,
     `Seed:`,
     input.seed.trim(),
@@ -121,6 +123,17 @@ export function buildChoicesPrompt(input: ChoicesRequest): string {
     );
   }
   return lines.join("\n");
+}
+
+function optionalText(value: unknown, max: number): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > max) {
+    return undefined;
+  }
+  return trimmed;
 }
 
 function isValidChoice(value: unknown): value is Choice {
@@ -168,10 +181,21 @@ export function extractChoicesFromReply(reply: {
       : [];
   const choices = rawChoices
     .filter(isValidChoice)
-    .map((choice) => ({
-      angle: choice.angle.trim().toLowerCase(),
-      paragraph: choice.paragraph.trim(),
-    }));
+    .map((choice) => {
+      const mapped: Choice = {
+        angle: choice.angle.trim().toLowerCase(),
+        paragraph: choice.paragraph.trim(),
+      };
+      const title = optionalText(choice.title, 120);
+      if (title) {
+        mapped.title = title;
+      }
+      const summary = optionalText(choice.summary, 300);
+      if (summary) {
+        mapped.summary = summary;
+      }
+      return mapped;
+    });
   if (choices.length === 0) {
     return {
       status: "error",

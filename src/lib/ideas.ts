@@ -2,6 +2,7 @@ import path from "node:path";
 import {
   DEFAULT_IDEAS,
   isIdeaOrigin,
+  isIdeaStatus,
   isIdeaTargetType,
   type Idea,
   type IdeaOrigin,
@@ -36,9 +37,45 @@ function isIdea(value: unknown): value is Idea {
     isIdeaOrigin(entry.origin) &&
     (entry.imagePrompt === undefined || typeof entry.imagePrompt === "string") &&
     (entry.imageUrl === undefined || typeof entry.imageUrl === "string") &&
+    (entry.status === undefined || isIdeaStatus(entry.status)) &&
+    (entry.usedAs === undefined ||
+      (Array.isArray(entry.usedAs) &&
+        entry.usedAs.every(
+          (link) =>
+            typeof link === "object" &&
+            link !== null &&
+            isIdeaTargetType((link as Record<string, unknown>).type) &&
+            typeof (link as Record<string, unknown>).title === "string" &&
+            typeof (link as Record<string, unknown>).href === "string",
+        ))) &&
     typeof entry.createdAt === "string" &&
     typeof entry.updatedAt === "string"
   );
+}
+
+export function markIdeaUsed(
+  id: string,
+  link: { type: IdeaTargetType; title: string; href: string },
+): Promise<Idea | undefined> {
+  return store.update((current) => {
+    const existing = current.find((idea) => idea.id === id);
+    if (!existing) {
+      return { data: current, value: undefined };
+    }
+    const usedAs = (existing.usedAs ?? []).filter(
+      (candidate) => candidate.href !== link.href,
+    );
+    const updated: Idea = {
+      ...existing,
+      status: "used",
+      usedAs: [...usedAs, link],
+      updatedAt: new Date().toISOString(),
+    };
+    return {
+      data: current.map((idea) => (idea.id === id ? updated : idea)),
+      value: updated,
+    };
+  });
 }
 
 export function listIdeas(): Promise<Idea[]> {

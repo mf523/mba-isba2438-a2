@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { Idea } from "@/data/ideas";
 import {
   IDEA_ORIGIN_LABELS,
@@ -23,6 +26,15 @@ export default function IdeaCard({
   onGenerateArtwork?: () => void;
   artworkBusy?: boolean;
 }) {
+  const [bodyOpen, setBodyOpen] = useState(false);
+  const used = idea.status === "used" && (idea.usedAs?.length ?? 0) > 0;
+  const startMatch = idea.targetType === "blog-post"
+    ? { href: `/admin/blogs?from-idea=${idea.id}`, label: "Start blog post" }
+    : { href: `/admin/projects?from-idea=${idea.id}`, label: "Start project" };
+  const startOther = idea.targetType === "blog-post"
+    ? { href: `/admin/projects?from-idea=${idea.id}`, label: "Start project" }
+    : { href: `/admin/blogs?from-idea=${idea.id}`, label: "Start blog post" };
+
   return (
     <li className="card brief-card">
       {idea.imageUrl ? (
@@ -57,9 +69,36 @@ export default function IdeaCard({
         </div>
       </div>
       <p>{idea.summary}</p>
+      {bodyOpen ? <p className="idea-card-body">{idea.body}</p> : null}
+      {idea.body.trim().length > 0 ? (
+        <p>
+          <button
+            className="link-button"
+            type="button"
+            aria-expanded={bodyOpen}
+            onClick={() => setBodyOpen((open) => !open)}
+          >
+            {bodyOpen ? "Hide the idea" : "Read the idea"}
+          </button>
+        </p>
+      ) : null}
+      {used ? (
+        <p className="brief-meta">
+          <span className="tag">became</span>
+          {(idea.usedAs ?? []).map((link) => (
+            <a key={link.href} href={link.href}>
+              {link.type === "blog-post" ? "Blog post" : "Project"}: {link.title}
+            </a>
+          ))}
+        </p>
+      ) : null}
       <p className="brief-meta">
         <TagList
-          items={[IDEA_ORIGIN_LABELS[idea.origin], targetLabel(idea.targetType)]}
+          items={[
+            IDEA_ORIGIN_LABELS[idea.origin],
+            targetLabel(idea.targetType),
+            ...(idea.status === "used" ? ["used"] : []),
+          ]}
         />
         <span className="brief-audience">
           updated {formatDateTime(idea.updatedAt)}
@@ -83,11 +122,11 @@ export default function IdeaCard({
       ) : null}
       {onEdit ? (
         <p className="brief-card-actions">
-          <a className="secondary-button" href={`/admin/blogs?from-idea=${idea.id}`}>
-            Start blog post
+          <a className="submit-button" href={startMatch.href}>
+            {startMatch.label}
           </a>
-          <a className="secondary-button" href={`/admin/projects?from-idea=${idea.id}`}>
-            Start project
+          <a className="secondary-button" href={startOther.href}>
+            {startOther.label}
           </a>
         </p>
       ) : null}

@@ -131,6 +131,40 @@ describe("extractChoicesFromReply", () => {
     });
   });
 
+  it("carries title and summary when the model provides them", () => {
+    const outcome = extractChoicesFromReply({
+      stopReason: "end_turn",
+      parsedOutput: {
+        choices: [{
+          angle: "practical",
+          title: "  Migrations, minus the fear  ",
+          summary: "A step-by-step explainer.  ",
+          paragraph: "A practical walkthrough.",
+        }],
+      },
+    });
+    const choice = outcome.status === "ready" ? outcome.choices[0] : null;
+    assert.equal(choice?.title, "Migrations, minus the fear");
+    assert.equal(choice?.summary, "A step-by-step explainer.");
+  });
+
+  it("drops oversized or empty titles and summaries", () => {
+    const outcome = extractChoicesFromReply({
+      stopReason: "end_turn",
+      parsedOutput: {
+        choices: [{
+          angle: "practical",
+          title: "   ",
+          summary: "x".repeat(301),
+          paragraph: "Text.",
+        }],
+      },
+    });
+    const choice = outcome.status === "ready" ? outcome.choices[0] : null;
+    assert.equal(choice?.title, undefined);
+    assert.equal(choice?.summary, undefined);
+  });
+
   it("reports a refusal", () => {
     const outcome = extractChoicesFromReply({ stopReason: "refusal", parsedOutput: null });
     assert.equal(outcome.status, "refusal");

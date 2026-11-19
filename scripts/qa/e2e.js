@@ -40,6 +40,19 @@ async function clickButton(ws, text) {
   await evalJs(`(() => { const b = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === ${JSON.stringify(text)}); if (b) b.click(); })()`);
 }
 async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
+async function waitFor(ws, expression, timeoutMs = 15000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const value = await evalJs(expression);
+    if (value) return value;
+    if (Date.now() > deadline) return value;
+    await sleep(300);
+  }
+}
+async function waitHydrated(ws, id, tagName = "HTMLInputElement") {
+  const ready = await waitFor(ws, `(() => { const el = document.getElementById(${JSON.stringify(id)}); return Boolean(el && Object.keys(el).some((k) => k.startsWith("__reactProps"))); })()`, 15000);
+  if (!ready) throw new Error(`EVAL-FAILED: #${id} never hydrated`);
+}
 (async () => {
   execFile("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     ["--headless=new", "--remote-debugging-port=9276", "--user-data-dir=/tmp/qa-stage3",
@@ -206,6 +219,10 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   console.log("--- 3.2 /admin/ideas screen (edit/delete)");
   await goto(ws, "http://localhost:3100/admin/ideas");
   await waitIdle(ws, 900);
+  const formHiddenUntilNewIdea = await evalJs(`document.getElementById("idea-title") === null && [...document.querySelectorAll("button")].some((b) => b.textContent === "New idea")`);
+  check("board renders first with a New idea button", formHiddenUntilNewIdea);
+  await clickButton(ws, "New idea");
+  await waitHydrated(ws, "idea-title");
   await fill(ws, "idea-title", "Screen Idea");
   await fill(ws, "idea-summary", "Idea from the screen.");
   await fill(ws, "idea-body", "Idea body text.", "HTMLTextAreaElement");
@@ -214,7 +231,7 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
   check("created idea appears", titles.includes("Screen Idea"));
   await clickInCard(ws, "Screen Idea", "Edit");
-  await waitIdle(ws, 400);
+  await waitHydrated(ws, "idea-title");
   const ideaTitleVal = await evalJs(`document.getElementById("idea-title")?.value`);
   check("edit prefills the idea form", ideaTitleVal === "Screen Idea", String(ideaTitleVal));
   const oracleInEdit = await evalJs(`Boolean(document.getElementById("idea-seed"))`);
@@ -235,6 +252,8 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   check("deleted idea gone", deleteGone && titles.length >= 2, JSON.stringify(titles));
 
   console.log("--- idea → content prefill");
+  await clickButton(ws, "New idea");
+  await waitHydrated(ws, "idea-title");
   await fill(ws, "idea-title", "Prefill Source");
   await fill(ws, "idea-summary", "Prefill summary.");
   await fill(ws, "idea-body", "Prefill body line one.", "HTMLTextAreaElement");
@@ -243,7 +262,7 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   const ideaId = await evalJs(`[...document.querySelectorAll(".brief-card")].find((c) => c.querySelector("h3")?.textContent === "Prefill Source")?.querySelector("a[href*='from-idea']")?.getAttribute("href")`);
   check("idea card exposes Start links", Boolean(ideaId), String(ideaId));
   await goto(ws, `http://localhost:3100${ideaId}`);
-  await waitIdle(ws, 1100);
+  await waitFor(ws, `document.getElementById("blog-title")?.value === "Prefill Source"`);
   const blogTitle = await evalJs(`document.getElementById("blog-title")?.value`);
   check("blog create form prefilled from idea", blogTitle === "Prefill Source", String(blogTitle));
 
@@ -251,8 +270,20 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   const blogContent = await evalJs(`document.getElementById("blog-content")?.value`);
   const prefillNote = await evalJs(`[...document.querySelectorAll(".form-feedback-success")].map((e) => e.textContent).join(" ")`);
   check("blog create form prefilled from idea", blogTitle === "Prefill Source" && blogSummary === "Prefill summary." && blogContent === "Prefill body line one." && prefillNote.includes("Prefilled"), `${JSON.stringify({ blogTitle, blogSummary })} ${prefillNote.slice(0, 50)}`);
+  await clickButton(ws, "Add Blog Post");
+  const addressCleared = await waitFor(ws, `window.location.search === ""`, 10000);
+  check("from-idea address cleared after save", addressCleared === true, String(await evalJs(`window.location.search`)));
+  await goto(ws, "http://localhost:3100/admin/ideas");
+  const usedCard = await waitFor(ws, `(() => { const card = [...document.querySelectorAll(".brief-card")].find((c) => c.querySelector("h3")?.textContent === "Prefill Source"); if (!card) return null; const used = Boolean([...card.querySelectorAll(".tag")].some((t) => t.textContent === "used")); const link = card.querySelector("a[href='/blogs/prefill-source']")?.textContent ?? null; return used && link ? { used, link } : null; })()`);
+  check("idea marked used with a link to the post", Boolean(usedCard?.used && usedCard.link), JSON.stringify(usedCard));
+  await goto(ws, "http://localhost:3100/admin/blogs");
+  await waitIdle(ws, 900);
+  await clickInCard(ws, "Prefill Source", "Delete");
+  await waitIdle(ws, 1200);
+  titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
+  check("scratch blog cleaned up", !titles.includes("Prefill Source"));
   await goto(ws, `http://localhost:3100/admin/projects?from-idea=${ideaId.split("=")[1]}`);
-  await waitIdle(ws, 1100);
+  await waitFor(ws, `document.getElementById("project-title")?.value === "Prefill Source"`);
   const projTitle = await evalJs(`document.getElementById("project-title")?.value`);
   const projDesc = await evalJs(`document.getElementById("project-description")?.value`);
   check("project create form prefilled from idea", projTitle === "Prefill Source" && projDesc === "Prefill body line one.", JSON.stringify({ projTitle, projDesc }).slice(0, 90));
@@ -264,6 +295,8 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   check("choices without admin → 401", unauthChoices === 401);
   await goto(ws, "http://localhost:3100/admin/ideas");
   await waitIdle(ws, 900);
+  await clickButton(ws, "New idea");
+  await waitHydrated(ws, "idea-seed", "HTMLTextAreaElement");
   await fill(ws, "idea-seed", "database migrations explained through bad relationships", "HTMLTextAreaElement");
   await clickButton(ws, "Show me the choices");
   let choiceCards = 0;
@@ -274,10 +307,14 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   }
   check("oracle shows 3 choice cards", choiceCards === 3, String(choiceCards));
   await evalJs(`document.querySelector(".choice-card")?.click()`);
-  await waitIdle(ws, 400);
+  await waitFor(ws, `Boolean(document.getElementById("idea-summary")?.value)`);
   const filledSummary = await evalJs(`document.getElementById("idea-summary")?.value`);
   const filledBody = await evalJs(`document.getElementById("idea-body")?.value`);
   check("selecting a choice fills summary + body", Boolean(filledSummary) && Boolean(filledBody) && filledBody.length > 20, String(filledSummary?.slice(0, 60)));
+  const filledTitle = await evalJs(`document.getElementById("idea-title")?.value`);
+  check("choice fills a working title", Boolean(filledTitle) && filledTitle.length > 0, String(filledTitle?.slice(0, 60)));
+  const summaryDistinct = await evalJs(`document.getElementById("idea-summary")?.value !== document.getElementById("idea-body")?.value.slice(0, document.getElementById("idea-summary")?.value.length)`);
+  check("summary is its own line, not the body's opening", summaryDistinct);
   await fill(ws, "idea-title", "Oracle Choice");
   await clickButton(ws, "Save idea");
   await waitIdle(ws, 1500);
@@ -296,6 +333,12 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
     }
   }
   check("generated picture appears on the idea card", artworkShown);
+  const primaryAction = await evalJs(`(() => { const card = [...document.querySelectorAll(".brief-card")].find((c) => c.querySelector("h3")?.textContent === "Oracle Choice"); const primary = card?.querySelector("a.submit-button"); return primary ? { label: primary.textContent, href: primary.getAttribute("href") } : null; })()`);
+  check("matching Start action is the primary one", Boolean(primaryAction?.label === "Start blog post" && primaryAction.href.includes("/admin/blogs")), JSON.stringify(primaryAction));
+  await evalJs(`[...document.querySelectorAll(".brief-card")].find((c) => c.querySelector("h3")?.textContent === "Oracle Choice")?.querySelector(".link-button")?.click()`);
+  await waitIdle(ws, 300);
+  const bodyShown = await evalJs(`Boolean([...document.querySelectorAll(".brief-card")].find((c) => c.querySelector("h3")?.textContent === "Oracle Choice")?.querySelector(".idea-card-body"))`);
+  check("card expands to show the body", bodyShown);
   const oracleId = await evalJs(`${oracleCard}?.querySelector("a[href*='from-idea']")?.getAttribute("href")?.split("=")[1]`);
   const imageStatus = await evalJs(`(async () => { const r = await fetch("/api/images/${oracleId}", { headers: { "cache-control": "no-store" } }); return { s: r.status, t: r.headers.get("content-type") }; })()`);
   check("GET /api/images/[ideaId] → 200 image", imageStatus.s === 200 && String(imageStatus.t).startsWith("image/"), JSON.stringify(imageStatus));
@@ -309,6 +352,23 @@ async function waitIdle(ws, ms) { await sleep(ms ?? 900); }
   await waitIdle(ws, 700);
   const nav = await evalJs(`[...document.querySelectorAll(".admin-nav a")].map((a) => a.textContent)`);
   check("studio nav order", JSON.stringify(nav) === JSON.stringify(["Briefs","Ideas","Blog posts","Projects","Contact requests","About page","Site config","View site"]), JSON.stringify(nav));
+
+  console.log("--- brief handoff");
+  await clickButton(ws, "New brief");
+  await waitHydrated(ws, "brief-title");
+  await fill(ws, "brief-title", "Handoff Brief");
+  await fill(ws, "brief-audience", "students");
+  await fill(ws, "brief-points", "point one", "HTMLTextAreaElement");
+  await clickButton(ws, "Save brief");
+  await waitIdle(ws, 800);
+  const handoffHref = await evalJs(`[...document.querySelectorAll(".brief-card")].find((c) => c.querySelector("h3")?.textContent === "Handoff Brief")?.querySelector("a[href*='from-brief']")?.getAttribute("href")`);
+  check("brief card offers Start an idea", Boolean(handoffHref), String(handoffHref));
+  await goto(ws, `http://localhost:3100${handoffHref}`);
+  await waitFor(ws, `(document.getElementById("idea-seed")?.value ?? "").includes("Handoff Brief")`);
+  const handoffSeed = await evalJs(`document.getElementById("idea-seed")?.value ?? ""`);
+  check("from-brief opens the oracle with the seed filled", handoffSeed.includes("Handoff Brief") && handoffSeed.includes("students"), handoffSeed.slice(0, 70));
+  const handoffEditorOpen = await evalJs(`document.getElementById("idea-title") !== null`);
+  check("from-brief opens the idea editor", handoffEditorOpen);
 
   console.log("--- public pages unchanged");
   const home = await apiText("/");

@@ -326,6 +326,25 @@ a {
   font-weight: 600;
 }
 
+.link-button {
+  font: inherit;
+  font-size: 14px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  min-height: 44px;
+}
+
+.idea-card-body {
+  color: var(--foreground);
+  white-space: pre-wrap;
+  border-left: 3px solid var(--border);
+  padding-left: 12px;
+}
+
 .field-group input,
 .field-group textarea {
   font: inherit;

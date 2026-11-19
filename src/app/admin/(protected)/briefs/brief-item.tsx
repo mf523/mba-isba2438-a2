@@ -51,6 +51,11 @@ export default function BriefItem({
           ))}
         </ul>
       ) : null}
+      <p className="brief-card-actions">
+        <a className="submit-button" href={`/admin/ideas?from-brief=${brief.id}`}>
+          Start an idea
+        </a>
+      </p>
       <p className="card-meta">Updated {formatDateTime(brief.updatedAt)}</p>
     </li>
   );

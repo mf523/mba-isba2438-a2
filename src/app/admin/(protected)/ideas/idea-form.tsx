@@ -19,6 +19,7 @@ import FormFeedback from "@/components/form-feedback";
 
 export interface IdeaFormProps {
   editing: Idea | null;
+  initialBriefId?: string;
   onSaved: (idea: Idea, mode: "create" | "edit") => void;
   onCancelEdit: () => void;
 }
@@ -29,7 +30,7 @@ function summaryFromParagraph(paragraph: string): string {
   return trimmed.length > 200 ? `${trimmed.slice(0, 197)}...` : trimmed;
 }
 
-export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormProps) {
+export default function IdeaForm({ editing, initialBriefId, onSaved, onCancelEdit }: IdeaFormProps) {
   const briefsSnapshot: BriefsSnapshot = useSyncExternalStore(
     subscribeToBriefs,
     getBriefsSnapshot,
@@ -59,12 +60,22 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
   const [artworkPending, setArtworkPending] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const choicesRef = useRef<HTMLDivElement>(null);
+  const seedSourceRef = useRef<{ kind: "hand" } | { kind: "brief"; id: string }>({
+    kind: "hand",
+  });
 
   useEffect(() => {
     if (choices.length > 0 && !choicesPending) {
       choicesRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [choices, choicesPending]);
+
+  useEffect(() => {
+    if (initialBriefId) {
+      applyBrief(initialBriefId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-time prefill from the briefs handoff
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,14 +94,17 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
 
   function applyBrief(id: string) {
     setBriefId(id);
-    if (!id) return;
+    if (!id) {
+      seedSourceRef.current = { kind: "hand" };
+      return;
+    }
     const brief = briefs.find((candidate) => candidate.id === id);
     if (!brief) return;
     setTargetType(brief.contentType === "project" ? "project" : "blog-post");
-    if (seed.trim().length === 0) {
-      setSeed(
-        `Audience: ${brief.audience}. Tone: ${brief.tone}. About: ${brief.title}. Points: ${brief.keyPoints}`,
-      );
+    const text = `Audience: ${brief.audience}. Tone: ${brief.tone}. About: ${brief.title}. Points: ${brief.keyPoints}`;
+    if (seed.trim().length === 0 || seedSourceRef.current.kind === "brief") {
+      setSeed(text);
+      seedSourceRef.current = { kind: "brief", id };
     }
   }
 
@@ -137,7 +151,10 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
       return;
     }
     setSelectedChoice(index);
-    setSummary(summaryFromParagraph(choice.paragraph));
+    if (choice.title) {
+      setTitle(choice.title);
+    }
+    setSummary(choice.summary ?? summaryFromParagraph(choice.paragraph));
     setBody(choice.paragraph);
     setOrigin("assistant");
     titleRef.current?.focus();
@@ -300,7 +317,10 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
             rows={3}
             placeholder="e.g. database migrations explained through bad relationships"
             value={seed}
-            onChange={(event) => setSeed(event.target.value)}
+            onChange={(event) => {
+              setSeed(event.target.value);
+              seedSourceRef.current = { kind: "hand" };
+            }}
           />
         </div>
         <button

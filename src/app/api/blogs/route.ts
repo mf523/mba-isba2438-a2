@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { logApiCall, parseJsonBody, requireAdmin, withRoute } from "@/lib/api";
 import { addBlog, getBlogs, validateBlogInput } from "@/lib/blogs";
+import { isUsableIdeaId, markIdeaUsed } from "@/lib/ideas";
 import { slugify } from "@/lib/validation";
 
 export const GET = withRoute(async (request: Request) => {
@@ -51,6 +52,18 @@ export const POST = withRoute(async (request: Request) => {
   }
 
   logApiCall(request, 201);
+  const fromIdeaId =
+    typeof input.ideaId === "string" ? input.ideaId.trim() : "";
+  if (isUsableIdeaId(fromIdeaId)) {
+    const linked = await markIdeaUsed(fromIdeaId, {
+      type: "blog-post",
+      title: result.blog.title,
+      href: `/blogs/${result.blog.slug}`,
+    });
+    if (linked) {
+      console.log(`[ideas] idea ${fromIdeaId} marked used → /blogs/${result.blog.slug}`);
+    }
+  }
   return NextResponse.json(
     { ok: true, blog: result.blog },
     { status: 201, headers: { "cache-control": "no-store" } },

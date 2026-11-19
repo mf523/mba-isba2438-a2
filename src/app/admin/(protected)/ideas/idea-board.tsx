@@ -18,7 +18,7 @@ type Filter = "all" | IdeaTargetType;
 
 type Editor =
   | { mode: "closed" }
-  | { mode: "create" }
+  | { mode: "create"; fromBrief?: string }
   | { mode: "edit"; idea: Idea };
 
 export default function IdeaBoard() {
@@ -28,6 +28,13 @@ export default function IdeaBoard() {
   const [boardError, setBoardError] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor>({ mode: "closed" });
   const [artworkBusyIds, setArtworkBusyIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fromBrief = new URLSearchParams(window.location.search).get("from-brief");
+    if (!fromBrief) return;
+    const id = window.setTimeout(() => setEditor({ mode: "create", fromBrief }), 0);
+    return () => window.clearTimeout(id);
+  }, []);
 
   async function handleGenerateArtwork(idea: Idea) {
     setArtworkBusyIds((current) => [...current, idea.id]);
@@ -189,20 +196,6 @@ export default function IdeaBoard() {
         </p>
       ) : null}
 
-      <section
-        aria-label={editor.mode === "edit" ? "Edit idea" : "Add an idea"}
-      >
-        <h2>
-          {editor.mode === "edit" ? `Edit "${editor.idea.title}"` : "Add an idea"}
-        </h2>
-        <IdeaForm
-          key={editor.mode === "edit" ? `edit-${editor.idea.id}` : "create"}
-          editing={editor.mode === "edit" ? editor.idea : null}
-          onSaved={handleSaved}
-          onCancelEdit={() => setEditor({ mode: "closed" })}
-        />
-      </section>
-
       <section aria-label="Saved ideas">
         <h2>Saved ideas</h2>
         {state.status === "loading" ? <p>Loading ideas…</p> : null}
@@ -216,10 +209,21 @@ export default function IdeaBoard() {
         ) : null}
         {state.status === "ready" ? (
           state.ideas.length === 0 ? (
-            <p className="briefs-empty">
-              No ideas yet. Add one by hand, type a seed and pick one of three
-              choices, or start from a brief.
-            </p>
+            <>
+              <p className="briefs-empty">
+                No ideas yet. Add one by hand, type a seed and pick one of three
+                choices, or start from a brief.
+              </p>
+              <p>
+                <button
+                  className="submit-button"
+                  type="button"
+                  onClick={() => setEditor({ mode: "create" })}
+                >
+                  New idea
+                </button>
+              </p>
+            </>
           ) : (
             <>
               <div className="field-group">
@@ -273,6 +277,47 @@ export default function IdeaBoard() {
           )
         ) : null}
       </section>
+
+      {editor.mode !== "closed" ? (
+        <section aria-label={editor.mode === "edit" ? "Edit idea" : "Add an idea"}>
+          <h2>
+            {editor.mode === "edit" ? `Edit "${editor.idea.title}"` : "Add an idea"}
+          </h2>
+          <IdeaForm
+            key={editor.mode === "edit" ? `edit-${editor.idea.id}` : "create"}
+            editing={editor.mode === "edit" ? editor.idea : null}
+            initialBriefId={editor.mode === "create" ? editor.fromBrief : undefined}
+            onSaved={handleSaved}
+            onCancelEdit={() => setEditor({ mode: "closed" })}
+          />
+          {editor.mode === "create" ? (
+            <p>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => setEditor({ mode: "closed" })}
+              >
+                Close
+              </button>
+            </p>
+          ) : null}
+        </section>
+      ) : (
+        state.status === "ready" && state.ideas.length > 0 ? (
+          <p>
+            <button
+              className="submit-button"
+              type="button"
+              onClick={() => {
+                setEditor({ mode: "create" });
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              New idea
+            </button>
+          </p>
+        ) : null
+      )}
     </>
   );
 }
