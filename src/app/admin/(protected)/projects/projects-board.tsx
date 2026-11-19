@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Drawer from "@/components/drawer";
 import ProjectForm from "./project-form";
 import ProjectItem from "./project-item";
 import type { Project } from "@/data/projects";
@@ -18,6 +19,7 @@ type Editor =
 export default function ProjectsBoard() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [editor, setEditor] = useState<Editor>({ mode: "closed" });
+  const [notice, setNotice] = useState<string | null>(null);
 
   function load() {
     fetch("/api/projects", { headers: { "cache-control": "no-store" } })
@@ -41,9 +43,22 @@ export default function ProjectsBoard() {
     load();
   }, []);
 
+  useEffect(() => {
+    const fromIdea = new URLSearchParams(window.location.search).get("from-idea");
+    if (!fromIdea) return;
+    const id = window.setTimeout(() => setEditor({ mode: "create" }), 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
   function handleSaved(project: Project, mode: "create" | "edit") {
+    setNotice(
+      mode === "create"
+        ? `Project added. View it at /projects/${project.slug}.`
+        : `Project "${project.title}" updated.`,
+    );
     if (state.status !== "ready") {
       load();
+      setEditor({ mode: "closed" });
       return;
     }
     setState({
@@ -76,14 +91,35 @@ export default function ProjectsBoard() {
 
   return (
     <>
-      <section aria-label={editor.mode === "edit" ? "Edit project" : "Add a project"}>
-        <h2>{editor.mode === "edit" ? `Edit "${editor.project.title}"` : "Add a project"}</h2>
+      {notice ? (
+        <p className="form-feedback form-feedback-success" role="status" aria-live="polite">
+          {notice}
+        </p>
+      ) : null}
+
+      {editor.mode === "closed" ? (
+        <p>
+          <button
+            className="submit-button"
+            type="button"
+            onClick={() => setEditor({ mode: "create" })}
+          >
+            New project
+          </button>
+        </p>
+      ) : null}
+
+      <Drawer
+        open={editor.mode !== "closed"}
+        onClose={() => setEditor({ mode: "closed" })}
+        title={editor.mode === "edit" ? `Edit "${editor.project.title}"` : "New project"}
+      >
         <ProjectForm
           editing={editor.mode === "edit" ? editor.project : null}
           onSaved={handleSaved}
           onCancelEdit={() => setEditor({ mode: "closed" })}
         />
-      </section>
+      </Drawer>
 
       <section aria-label="All projects">
         <h2>All projects</h2>
@@ -99,7 +135,7 @@ export default function ProjectsBoard() {
         {state.status === "ready" ? (
           state.projects.length === 0 ? (
             <p className="briefs-empty">
-              No projects yet. Add the first one with the form above.
+              No projects yet. Add the first one with the New project button.
             </p>
           ) : (
             <ul className="brief-list">
@@ -109,7 +145,6 @@ export default function ProjectsBoard() {
                   project={project}
                   onEdit={() => {
                     setEditor({ mode: "edit", project });
-                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                   onDeleted={() => handleDeleted(project.slug)}
                 />

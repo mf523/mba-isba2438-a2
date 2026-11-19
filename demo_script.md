@@ -50,7 +50,7 @@ Read the blockquotes as narration, adapting the wording to your speaking style. 
 
 ### 2:15–3:30 — The oracle (custom backend feature: ideas)
 
-*Open **Ideas** — the saved-ideas board is on top. Click **New idea**. Point at the "The problem is choice." panel.*
+*Open **Ideas** — the saved-ideas board is on top. Click **New idea** — the editor slides in as a side panel, the board stays put. Point at the "The problem is choice." oracle.*
 
 > Ideation is hard because the problem is choice. So instead of one AI draft, the assistant is an oracle of options: I give it a seed and it returns three distinct narrative directions — each with its own working headline and one-line summary.
 
@@ -125,7 +125,7 @@ Read the blockquotes as narration, adapting the wording to your speaking style. 
 
 - [ ] All A2 pages loaded and usable (home, about, both project details, blogs).
 - [ ] Brief saved → **F5** → brief restored; corrupt-storage variant shown with the warning notice; brief card shows **Start an idea**.
-- [ ] Ideas board renders first; **New idea** opens the oracle.
+- [ ] Ideas board renders first; **New idea** opens the editor in a right-side drawer (ESC / ✕ / scrim closes it; drawer closes after save with a board notice).
 - [ ] Seed → exactly three choice cards (each with headline + summary) → one chosen → title/summary/body filled → edited → saved.
 - [ ] Picture generated on the idea card and visible; card expands via **Read the idea**.
 - [ ] Blog created from the idea → idea shows the **used** tag with a link to the post; address bar cleared.

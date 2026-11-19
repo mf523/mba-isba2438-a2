@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Drawer from "@/components/drawer";
 import BlogForm from "./blog-form";
 import BlogItem from "./blog-item";
 import type { Blog } from "@/data/blogs";
@@ -18,6 +19,7 @@ type Editor =
 export default function BlogBoard() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [editor, setEditor] = useState<Editor>({ mode: "closed" });
+  const [notice, setNotice] = useState<string | null>(null);
 
   function load() {
     fetch("/api/blogs", { headers: { "cache-control": "no-store" } })
@@ -44,9 +46,22 @@ export default function BlogBoard() {
     load();
   }, []);
 
+  useEffect(() => {
+    const fromIdea = new URLSearchParams(window.location.search).get("from-idea");
+    if (!fromIdea) return;
+    const id = window.setTimeout(() => setEditor({ mode: "create" }), 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
   function handleSaved(blog: Blog, mode: "create" | "edit") {
+    setNotice(
+      mode === "create"
+        ? `Blog post published. View it at /blogs/${blog.slug}.`
+        : `Blog post "${blog.title}" updated.`,
+    );
     if (state.status !== "ready") {
       load();
+      setEditor({ mode: "closed" });
       return;
     }
     setState({
@@ -84,14 +99,35 @@ export default function BlogBoard() {
 
   return (
     <>
-      <section aria-label={editor.mode === "edit" ? "Edit blog post" : "Add a blog post"}>
-        <h2>{editor.mode === "edit" ? `Edit "${editor.blog.title}"` : "Add a blog post"}</h2>
+      {notice ? (
+        <p className="form-feedback form-feedback-success" role="status" aria-live="polite">
+          {notice}
+        </p>
+      ) : null}
+
+      {editor.mode === "closed" ? (
+        <p>
+          <button
+            className="submit-button"
+            type="button"
+            onClick={() => setEditor({ mode: "create" })}
+          >
+            New blog post
+          </button>
+        </p>
+      ) : null}
+
+      <Drawer
+        open={editor.mode !== "closed"}
+        onClose={() => setEditor({ mode: "closed" })}
+        title={editor.mode === "edit" ? `Edit "${editor.blog.title}"` : "New blog post"}
+      >
         <BlogForm
           editing={editor.mode === "edit" ? editor.blog : null}
           onSaved={handleSaved}
           onCancelEdit={() => setEditor({ mode: "closed" })}
         />
-      </section>
+      </Drawer>
 
       <section aria-label="Published blog posts">
         <h2>Published posts</h2>
@@ -107,7 +143,7 @@ export default function BlogBoard() {
         {state.status === "ready" ? (
           sorted.length === 0 ? (
             <p className="briefs-empty">
-              No blog posts yet. Add the first one with the form above.
+              No blog posts yet. Add the first one with the New blog post button.
             </p>
           ) : (
             <ul className="brief-list">
@@ -117,7 +153,6 @@ export default function BlogBoard() {
                   blog={blog}
                   onEdit={() => {
                     setEditor({ mode: "edit", blog });
-                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                   onDeleted={() => handleDeleted(blog.slug)}
                 />

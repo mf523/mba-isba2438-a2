@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Drawer from "@/components/drawer";
 import IdeaCard from "@/components/idea-card";
 import IdeaForm from "./idea-form";
 import {
@@ -264,7 +265,6 @@ export default function IdeaBoard() {
                       idea={idea}
                       onEdit={() => {
                         setEditor({ mode: "edit", idea });
-                        window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                       onDelete={() => handleDelete(idea)}
                       onGenerateArtwork={() => handleGenerateArtwork(idea)}
@@ -278,46 +278,31 @@ export default function IdeaBoard() {
         ) : null}
       </section>
 
-      {editor.mode !== "closed" ? (
-        <section aria-label={editor.mode === "edit" ? "Edit idea" : "Add an idea"}>
-          <h2>
-            {editor.mode === "edit" ? `Edit "${editor.idea.title}"` : "Add an idea"}
-          </h2>
-          <IdeaForm
-            key={editor.mode === "edit" ? `edit-${editor.idea.id}` : "create"}
-            editing={editor.mode === "edit" ? editor.idea : null}
-            initialBriefId={editor.mode === "create" ? editor.fromBrief : undefined}
-            onSaved={handleSaved}
-            onCancelEdit={() => setEditor({ mode: "closed" })}
-          />
-          {editor.mode === "create" ? (
-            <p>
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() => setEditor({ mode: "closed" })}
-              >
-                Close
-              </button>
-            </p>
-          ) : null}
-        </section>
-      ) : (
-        state.status === "ready" && state.ideas.length > 0 ? (
-          <p>
-            <button
-              className="submit-button"
-              type="button"
-              onClick={() => {
-                setEditor({ mode: "create" });
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-            >
-              New idea
-            </button>
-          </p>
-        ) : null
-      )}
+      <Drawer
+        open={editor.mode !== "closed"}
+        onClose={() => setEditor({ mode: "closed" })}
+        title={editor.mode === "edit" ? `Edit "${editor.idea.title}"` : "Add an idea"}
+      >
+        <IdeaForm
+          key={editor.mode === "edit" ? `edit-${editor.idea.id}` : "create"}
+          editing={editor.mode === "edit" ? editor.idea : null}
+          initialBriefId={editor.mode === "create" ? editor.fromBrief : undefined}
+          onSaved={handleSaved}
+          onCancelEdit={() => setEditor({ mode: "closed" })}
+        />
+      </Drawer>
+
+      {editor.mode === "closed" && state.status === "ready" && state.ideas.length > 0 ? (
+        <p>
+          <button
+            className="submit-button"
+            type="button"
+            onClick={() => setEditor({ mode: "create" })}
+          >
+            New idea
+          </button>
+        </p>
+      ) : null}
     </>
   );
 }

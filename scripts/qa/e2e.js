@@ -143,6 +143,8 @@ async function waitHydrated(ws, id, tagName = "HTMLInputElement") {
   await waitIdle(ws, 900);
   let titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
   check("projects list renders defaults", titles.includes("Resume Site"), JSON.stringify(titles).slice(0, 80));
+  await clickButton(ws, "New project");
+  await waitHydrated(ws, "project-title");
   await fill(ws, "project-title", "Screen Probe");
   await fill(ws, "project-summary", "Added from the screen.");
   await fill(ws, "project-description", "Screen description body.", "HTMLTextAreaElement");
@@ -153,7 +155,7 @@ async function waitHydrated(ws, id, tagName = "HTMLInputElement") {
   const successMsg = await evalJs(`[...document.querySelectorAll(".form-feedback-success")].map((e) => e.textContent).join(" ")`);
   check("success feedback shown", successMsg.includes("Project added"), successMsg.slice(0, 70));
   await clickInCard(ws, "Screen Probe", "Edit");
-  await waitIdle(ws, 300);
+  await waitHydrated(ws, "project-title");
   await fill(ws, "project-title", "Screen Probe v2");
   await clickButton(ws, "Save changes");
   await waitIdle(ws);
@@ -163,6 +165,8 @@ async function waitHydrated(ws, id, tagName = "HTMLInputElement") {
   await waitIdle(ws, 1200);
   titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
   check("delete (confirmed) removes from list", !titles.includes("Screen Probe v2") && titles.includes("Resume Site") && titles.includes("Task Tracker"), JSON.stringify(titles).slice(0, 90));
+  await clickButton(ws, "New project");
+  await waitHydrated(ws, "project-title");
   await evalJs(`(() => { const el = document.getElementById("project-title"); const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set; s.call(el, ""); el.dispatchEvent(new Event("input", { bubbles: true })); })()`);
   await clickButton(ws, "Add project");
   await waitIdle(ws);
@@ -174,6 +178,8 @@ async function waitHydrated(ws, id, tagName = "HTMLInputElement") {
   await waitIdle(ws, 900);
   titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
   check("blogs list renders", titles.length >= 1, JSON.stringify(titles).slice(0, 80));
+  await clickButton(ws, "New blog post");
+  await waitHydrated(ws, "blog-title");
   await fill(ws, "blog-title", "Screen Blog");
   await fill(ws, "blog-summary", "From the screen.");
   await fill(ws, "blog-content", "Screen body.", "HTMLTextAreaElement");
@@ -182,7 +188,7 @@ async function waitHydrated(ws, id, tagName = "HTMLInputElement") {
   titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
   check("created blog appears", titles.includes("Screen Blog"), JSON.stringify(titles).slice(0, 90));
   await clickInCard(ws, "Screen Blog", "Edit");
-  await waitIdle(ws, 300);
+  await waitHydrated(ws, "blog-title");
   await fill(ws, "blog-title", "Screen Blog v2");
   await clickButton(ws, "Save changes");
   await waitIdle(ws);
@@ -223,6 +229,7 @@ async function waitHydrated(ws, id, tagName = "HTMLInputElement") {
   check("board renders first with a New idea button", formHiddenUntilNewIdea);
   await clickButton(ws, "New idea");
   await waitHydrated(ws, "idea-title");
+  check("editor opens in a drawer", Boolean(await evalJs(`Boolean(document.querySelector(".drawer-panel[role='dialog']"))`)));
   await fill(ws, "idea-title", "Screen Idea");
   await fill(ws, "idea-summary", "Idea from the screen.");
   await fill(ws, "idea-body", "Idea body text.", "HTMLTextAreaElement");
@@ -230,6 +237,8 @@ async function waitHydrated(ws, id, tagName = "HTMLInputElement") {
   await waitIdle(ws);
   titles = await evalJs(`[...document.querySelectorAll(".brief-card h3")].map((h) => h.textContent)`);
   check("created idea appears", titles.includes("Screen Idea"));
+  const drawerGone = await waitFor(ws, `!document.querySelector(".drawer-panel")`, 8000);
+  check("drawer closes after save", drawerGone === true);
   await clickInCard(ws, "Screen Idea", "Edit");
   await waitHydrated(ws, "idea-title");
   const ideaTitleVal = await evalJs(`document.getElementById("idea-title")?.value`);

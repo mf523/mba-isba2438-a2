@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
+import Drawer from "@/components/drawer";
 import FormFeedback from "@/components/form-feedback";
 import BriefForm from "./brief-form";
 import BriefItem from "./brief-item";
@@ -32,7 +33,6 @@ export default function BriefsBoard() {
   const [editor, setEditor] = useState<EditorState>({ mode: "closed" });
   const [notice, setNotice] = useState("");
   const [writeError, setWriteError] = useState<string | null>(null);
-  const formHeadingRef = useRef<HTMLHeadingElement>(null);
 
   function persist(next: Brief[]) {
     const result = writeBriefs(next);
@@ -125,18 +125,19 @@ export default function BriefsBoard() {
             New brief
           </button>
         </p>
-      ) : (
-        <section aria-label="Brief editor">
-          <h2 ref={formHeadingRef}>
-            {editor.mode === "edit" ? "Edit brief" : "New brief"}
-          </h2>
-          <BriefForm
-            initial={editor.mode === "edit" ? editor.brief : null}
-            onSave={handleSave}
-            onCancel={() => setEditor({ mode: "closed" })}
-          />
-        </section>
-      )}
+      ) : null}
+
+      <Drawer
+        open={editor.mode !== "closed"}
+        onClose={() => setEditor({ mode: "closed" })}
+        title={editor.mode === "edit" ? "Edit brief" : "New brief"}
+      >
+        <BriefForm
+          initial={editor.mode === "edit" ? editor.brief : null}
+          onSave={handleSave}
+          onCancel={() => setEditor({ mode: "closed" })}
+        />
+      </Drawer>
 
       <section aria-label="Saved briefs">
         <h2>Saved briefs</h2>
@@ -157,7 +158,6 @@ export default function BriefsBoard() {
                   brief={brief}
                   onEdit={() => {
                     setEditor({ mode: "edit", brief });
-                    formHeadingRef.current?.scrollIntoView({ block: "start" });
                   }}
                   onDelete={() => handleDelete(brief)}
                 />
