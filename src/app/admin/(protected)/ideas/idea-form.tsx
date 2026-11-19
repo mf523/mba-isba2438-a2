@@ -290,6 +290,17 @@ export default function IdeaForm({ editing, onSaved, onCancelEdit }: IdeaFormPro
         >
           {choicesPending ? "Consulting the oracle…" : "Show me the choices"}
         </button>
+        {choices.length > 0 ? (
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={choicesPending}
+            style={{ marginLeft: 8 }}
+            onClick={handleShowChoices}
+          >
+            {choicesPending ? "Shuffling…" : "Shuffle again"}
+          </button>
+        ) : null}
         {choicesError ? (
           <p className="form-feedback form-feedback-error" role="alert">
             {choicesError}
