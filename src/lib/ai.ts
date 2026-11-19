@@ -325,6 +325,16 @@ export const IMAGE_GEN_TIMEOUT_MS = 60_000;
 export const POLLINATIONS_DEFAULT_URL = "https://image.pollinations.ai";
 const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
+export function getImageProvider(): { id: "pollinations"; url: string } {
+  return {
+    id: "pollinations",
+    url: (process.env.IMAGE_PROVIDER_URL || POLLINATIONS_DEFAULT_URL).replace(
+      /\/+$/,
+      "",
+    ),
+  };
+}
+
 export type NarrativeImageOutcome =
   | {
       status: "ready";
